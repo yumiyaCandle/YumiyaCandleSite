@@ -4,12 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Nuvo Store</title>
-<meta name="description" content="Nuvo : les objets tech et bien-être les plus demandés. Bague connectée, écouteurs, masque LED, batterie magnétique, styler et mini projecteur.">
+<meta name="description" content="Nuvo : les objets tech les plus demandés, à faire pivoter en 3D. Bague connectée, écouteurs, montre, casque, batterie magnétique et mini projecteur.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-/* Mise en page : vues empilées (Accueil, Boutique, Produit, Aide), scènes collantes pilotées par le défilement */
+/* Mise en page : vues empilées (Accueil, Boutique, Produit, Aide) ; produits rendus en 3D temps réel, scènes pilotées par le défilement */
 :root{
   --bg:#fff;--bg-alt:#f5f5f7;--ink:#1d1d1f;--ink-2:#6e6e73;--ink-3:#86868b;--line:#d2d2d7;
   --accent:#0a7cff;--accent-2:#0062d1;--accent-soft:#e8f2ff;--accent-dark:#2997ff;
@@ -22,15 +22,16 @@
 [hidden]{display:none!important}
 html{-webkit-text-size-adjust:100%}
 body{font-family:var(--font);background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;overflow-x:hidden;letter-spacing:-.01em}
-img,svg{display:block;max-width:100%}
+img,svg,canvas{display:block;max-width:100%}
 a{color:inherit;text-decoration:none}
 button,select{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 :focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:6px}
 .wrap{max-width:1024px;margin:0 auto;padding-left:max(22px,env(safe-area-inset-left,0px));padding-right:max(22px,env(safe-area-inset-right,0px))}
 .view{display:none}
 .view.on{display:block}
+img[data-thumb]:not([src]){visibility:hidden}
 
-/* ───── Global nav + flyout */
+/* ───── Navigation */
 .gnav{position:sticky;top:env(safe-area-inset-top,0px);z-index:120;height:48px;background:rgba(250,250,252,.8);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid rgba(0,0,0,.06)}
 .gnav.dark{background:rgba(22,22,23,.8);color:var(--dark-ink);border-color:rgba(255,255,255,.08)}
 .gnav .wrap{height:100%;display:flex;align-items:center;justify-content:space-between;gap:24px}
@@ -54,15 +55,16 @@ button,select{font:inherit;color:inherit;background:none;border:0;cursor:pointer
 .flyout .wrap{padding-block:36px 44px;display:grid;grid-template-columns:repeat(6,1fr);gap:16px}
 .fly-item{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;font-size:13px;font-weight:600;opacity:0;transform:translateY(-8px);transition:opacity .35s,transform .45s var(--ease)}
 .flyout.on .fly-item{opacity:1;transform:none}
-.fly-item img{width:96px;height:96px;border-radius:22px;object-fit:cover;transition:transform .35s var(--ease)}
-.fly-item:hover img{transform:scale(1.06)}
+.fly-item .fi{width:96px;height:96px;border-radius:22px;overflow:hidden;background:var(--c)}
+.fly-item img{width:100%;height:100%;object-fit:contain;transition:transform .35s var(--ease)}
+.fly-item:hover img{transform:scale(1.08) rotate(-4deg)}
 .fly-item span{font-weight:400;color:var(--ink-2);font-size:12px}
 .navscrim{position:fixed;inset:0;z-index:105;background:rgba(232,232,237,.4);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);opacity:0;pointer-events:none;transition:opacity .35s}
 .navscrim.on{opacity:1;pointer-events:auto}
 .mnav{display:none}
 .ribbon{background:var(--bg-alt);text-align:center;font-size:14px;padding:12px 22px}
 
-/* ───── Buttons & type */
+/* ───── Boutons & typo */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:0 22px;border-radius:980px;font-size:17px;background:var(--accent);color:#fff;border:1px solid var(--accent);transition:background .2s,transform .12s ease-out}
 .btn:hover{background:var(--accent-2);border-color:var(--accent-2)}
 .btn:active{transform:scale(.96)}
@@ -88,20 +90,25 @@ button,select{font:inherit;color:inherit;background:none;border:0;cursor:pointer
 .on-dark .new{color:var(--warm-dark)}
 .on-dark{color:var(--dark-ink)}
 
-/* ───── Scroll scenes */
+/* ───── Viewers 3D */
+.v3d{position:relative}
+.v3d canvas{position:absolute;inset:0;width:100%!important;height:100%!important;outline:none}
+.v3d .ph{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;transition:opacity .5s}
+.v3d.live .ph{opacity:0}
+.no3d .v3d .ph{opacity:1}
+
+/* ───── Scènes */
 .scene{position:relative}
 .sticky{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden}
-
-/* Accueil : zoom arrière façon page écran */
-.hero-scene{height:280vh;background:#000}
+.hero-scene{height:300vh;background:#000}
 .hero-scene .sticky{display:grid;place-items:center;text-align:center}
-.hs-ring{position:absolute;left:50%;top:50%;width:min(66vh,88vw);translate:-50% -50%;transform:translateY(calc(min(1,calc(var(--p,0)*1.4))*-9vh)) scale(calc(2.5 - min(1,calc(var(--p,0)*1.4))*1.85)) rotate(calc(var(--p,0)*-16deg));opacity:calc(.4 + var(--p,0)*.6);will-change:transform}
-.hs-a{position:relative;z-index:1;padding:0 22px;opacity:clamp(0,calc(1 - var(--p,0)*3),1);transform:translateY(calc(var(--p,0)*-80px)) scale(calc(1 + var(--p,0)*.2))}
-.hs-a h1{font-size:clamp(52px,11vw,140px);font-weight:700;letter-spacing:-.05em;line-height:.95}
+.hero-scene .v3d{position:absolute;inset:0;pointer-events:none}
+.hs-a{position:relative;z-index:1;padding:0 22px;opacity:clamp(0,calc(1 - var(--p,0)*3.2),1);transform:translateY(calc(var(--p,0)*-80px)) scale(calc(1 + var(--p,0)*.2));pointer-events:none}
+.hs-a h1{font-size:clamp(52px,11vw,140px);font-weight:700;letter-spacing:-.05em;line-height:.95;text-shadow:0 10px 60px rgba(0,0,0,.5)}
 .hs-a p{font-size:clamp(19px,2.4vw,28px);color:var(--dark-2-ink);margin-top:18px}
-.hs-b{position:absolute;left:0;right:0;bottom:8vh;z-index:1;padding:0 22px;opacity:clamp(0,calc((var(--p,0) - .55)*4),1);transform:translateY(calc(clamp(0,calc((1 - var(--p,0))*2.2),1)*40px))}
+.hs-b{position:absolute;left:0;right:0;bottom:7vh;z-index:1;padding:0 22px;opacity:clamp(0,calc((var(--p,0) - .6)*4),1);transform:translateY(calc(clamp(0,calc((1 - var(--p,0))*2.5),1)*40px))}
 .hs-b .h-hero{margin-bottom:6px}
-.hint{position:absolute;bottom:4vh;left:50%;translate:-50% 0;font-size:12px;color:var(--ink-3);display:flex;flex-direction:column;align-items:center;gap:6px;opacity:clamp(0,calc(1 - var(--p,0)*8),1)}
+.hint{position:absolute;bottom:4vh;left:50%;translate:-50% 0;font-size:12px;color:var(--ink-3);display:flex;flex-direction:column;align-items:center;gap:6px;opacity:clamp(0,calc(1 - var(--p,0)*8),1);z-index:2}
 .hint i{width:10px;height:10px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg);animation:nudge 1.6s ease-in-out infinite}
 @keyframes nudge{50%{transform:translateY(5px) rotate(45deg)}}
 
@@ -113,16 +120,10 @@ button,select{font:inherit;color:inherit;background:none;border:0;cursor:pointer
 .grid-2 .h-hero{font-size:clamp(30px,3.6vw,40px)}
 .grid-2 .sub{font-size:clamp(17px,1.8vw,21px)}
 .press{margin-top:auto;width:100%;display:flex;justify-content:center;align-items:flex-end;cursor:pointer;-webkit-tap-highlight-color:transparent}
-.press img{width:min(540px,100%);transform:translateY(calc((1 - var(--v,1))*60px)) scale(calc(.92 + var(--v,1)*.08));transition:filter .3s;-webkit-mask-image:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent),linear-gradient(180deg,transparent,#000 12%);-webkit-mask-composite:source-in;mask-image:linear-gradient(90deg,transparent,#000 14%,#000 86%,transparent),linear-gradient(180deg,transparent,#000 12%);mask-composite:intersect}
-.grid-2 .press img{width:min(420px,92%)}
-.press:active img{filter:brightness(.95)}
-.tile.bleed{padding:0;justify-content:flex-start}
-.tile.bleed .press{position:absolute;inset:0;margin:0}
-.tile.bleed .press img{width:100%;height:100%;object-fit:cover;-webkit-mask-image:none;mask-image:none;transform:scale(calc(1.12 - var(--v,1)*.12))}
-.tile.bleed::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.8),rgba(0,0,0,.35) 35%,rgba(0,0,0,0) 60%);pointer-events:none}
-.tile.bleed .copy{position:relative;z-index:1;padding:56px 22px 0;pointer-events:none}
-.tile.bleed .copy .ctas{pointer-events:auto}
-.tap-tip{position:absolute;right:16px;bottom:16px;z-index:2;font-size:12px;font-weight:500;padding:7px 12px;border-radius:980px;background:rgba(255,255,255,.75);color:var(--ink);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);opacity:0;transform:translateY(6px);transition:opacity .3s,transform .4s var(--ease);pointer-events:none}
+.press img{width:min(500px,100%);aspect-ratio:1;object-fit:contain;transform:translateY(calc((1 - var(--v,1))*70px)) rotate(calc((1 - var(--v,1))*-10deg)) scale(calc(.9 + var(--v,1)*.1));transition:filter .3s}
+.grid-2 .press img{width:min(400px,90%)}
+.press:active img{filter:brightness(.94)}
+.tap-tip{position:absolute;right:16px;bottom:16px;z-index:2;font-size:12px;font-weight:500;padding:7px 12px;border-radius:980px;background:rgba(255,255,255,.75);color:#1d1d1f;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);opacity:0;transform:translateY(6px);transition:opacity .3s,transform .4s var(--ease);pointer-events:none}
 .tile:hover .tap-tip{opacity:1;transform:none}
 
 /* Galerie horizontale */
@@ -134,14 +135,14 @@ button,select{font:inherit;color:inherit;background:none;border:0;cursor:pointer
 .hg-card:active{transform:scale(.97)}
 .hg-card h3{font-size:28px;font-weight:600;letter-spacing:-.03em;position:relative;z-index:1}
 .hg-card p{font-size:17px;opacity:.75;margin-top:4px;position:relative;z-index:1}
-.hg-card img{position:absolute;left:0;right:0;bottom:0;width:100%;height:74%;object-fit:cover;transition:transform .6s var(--ease)}
-.hg-card:hover img{transform:scale(1.05)}
+.hg-card img{position:absolute;left:4%;right:4%;bottom:2%;width:92%;height:78%;object-fit:contain;transition:transform .6s var(--ease)}
+.hg-card:hover img{transform:scale(1.06) rotate(-3deg)}
 .hg-card .plus{position:absolute;right:20px;bottom:20px;z-index:1;width:36px;height:36px;border-radius:50%;background:rgba(29,29,31,.8);color:#fff;display:grid;place-items:center;font-size:22px;line-height:1;transition:transform .3s var(--ease)}
 .hg-card:hover .plus{transform:rotate(90deg)}
 .hg-bar{margin:0 var(--gutter);height:3px;border-radius:3px;background:var(--line);overflow:hidden;max-width:980px}
 .hg-bar i{display:block;height:100%;width:calc(var(--p,0)*100%);background:var(--ink)}
 
-/* Révélation mot à mot */
+/* Mots */
 .words-scene{height:240vh;background:var(--bg)}
 .words-scene .sticky{display:grid;place-items:center}
 .words{max-width:960px;padding:0 22px;font-size:clamp(30px,4.8vw,60px);font-weight:600;letter-spacing:-.035em;line-height:1.12;text-wrap:balance}
@@ -160,14 +161,11 @@ section.sec.dark{background:var(--dark);color:var(--dark-ink)}
 .stat{border-top:1px solid #333;padding-top:20px}
 .stat b{display:block;font-size:clamp(30px,4vw,44px);font-weight:600;letter-spacing:-.03em;margin-bottom:6px;font-variant-numeric:tabular-nums}
 .stat span{font-size:14px;color:var(--dark-2-ink);line-height:1.45}
-.ring-spin{width:min(420px,76%);margin:40px auto 0;transform:rotate(calc((var(--v,1) - 1)*40deg)) scale(calc(.8 + var(--v,1)*.2))}
-
-/* Comparer */
 .compare{display:grid;grid-template-columns:repeat(3,1fr);gap:28px;text-align:center}
 .cmp{display:flex;flex-direction:column;align-items:center}
 .cmp .press{margin:0 0 24px;width:auto}
-.cmp img{width:180px;height:180px;object-fit:cover;border-radius:24px;transition:transform .4s var(--ease)}
-.cmp .press:hover img{transform:scale(1.05) rotate(-2deg)}
+.cmp .press img{width:200px;height:200px;border-radius:24px;background:var(--c);transition:transform .4s var(--ease)}
+.cmp .press:hover img{transform:scale(1.05) rotate(-3deg)}
 .cmp h3{font-size:24px;font-weight:600;letter-spacing:-.02em}
 .cmp-price{font-size:17px;margin:6px 0 16px}
 .cmp ul{list-style:none;width:100%;border-top:1px solid var(--line);margin-top:28px}
@@ -186,8 +184,8 @@ section.sec.dark{background:var(--dark);color:var(--dark-ink)}
 .chips{display:flex;gap:26px;overflow-x:auto;padding:12px var(--gutter) 24px;scrollbar-width:none}
 .chips::-webkit-scrollbar{display:none}
 .chip{display:flex;flex-direction:column;align-items:center;gap:10px;font-size:14px;font-weight:500;flex:0 0 auto;color:var(--ink-2);transition:color .2s}
-.chip .ci{width:76px;height:76px;border-radius:50%;overflow:hidden;background:var(--bg-alt);box-shadow:0 0 0 2px transparent;transition:box-shadow .3s var(--ease),transform .3s var(--ease)}
-.chip .ci img{width:100%;height:100%;object-fit:cover}
+.chip .ci{width:76px;height:76px;border-radius:50%;overflow:hidden;background:var(--c,var(--bg-alt));box-shadow:0 0 0 2px transparent;transition:box-shadow .3s var(--ease),transform .3s var(--ease)}
+.chip .ci img{width:100%;height:100%;object-fit:contain}
 .chip .ci.all{background:conic-gradient(from 200deg,#0a7cff,#7b5cff,#ff5c8a,#0a7cff)}
 .chip:hover .ci{transform:scale(1.06)}
 .chip:active .ci{transform:scale(.94)}
@@ -199,8 +197,8 @@ section.sec.dark{background:var(--dark);color:var(--dark-ink)}
 .card{position:relative;perspective:900px}
 .tilt{position:relative;background:#fff;border-radius:var(--radius);overflow:hidden;display:flex;flex-direction:column;height:100%;box-shadow:0 4px 30px rgba(0,0,0,.06);transform-style:preserve-3d;will-change:transform;cursor:pointer}
 .card-media{aspect-ratio:1;overflow:hidden;background:var(--c)}
-.card-media img{width:100%;height:100%;object-fit:cover;transition:transform .6s var(--ease)}
-.tilt:hover .card-media img{transform:scale(1.04)}
+.card-media img{width:100%;height:100%;object-fit:contain;transition:transform .7s var(--ease)}
+.tilt:hover .card-media img{transform:scale(1.07) rotate(-4deg)}
 .glare{position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at var(--gx,50%) var(--gy,30%),rgba(255,255,255,.45),transparent 50%);opacity:0;transition:opacity .3s;mix-blend-mode:soft-light;z-index:2}
 .tilt:hover .glare{opacity:1}
 .card-body{padding:20px 24px 24px;display:flex;flex-direction:column;flex:1}
@@ -232,13 +230,11 @@ section.sec.dark{background:var(--dark);color:var(--dark-ink)}
 .pnav nav::-webkit-scrollbar{display:none}
 .pnav nav a{opacity:.75;white-space:nowrap}
 .pnav nav a:hover{opacity:1}
-.pd-hero{height:240vh;background:var(--pbg);color:var(--pfg)}
+.pd-hero{height:260vh;background:var(--pbg);color:var(--pfg)}
 .pd-hero .sticky{text-align:center}
-.pd-name{position:absolute;top:max(14vh,128px);left:0;right:0;padding:0 16px;font-size:clamp(52px,12vw,168px);font-weight:700;letter-spacing:-.055em;line-height:.92;transform:translateY(calc(var(--p,0)*-2vh)) scale(calc(1 - var(--p,0)*.38));opacity:calc(1 - var(--p,0)*.45);z-index:1;text-wrap:balance}
-.pd-img{position:absolute;left:50%;top:52%;width:min(52vh,82vw);translate:-50% -50%;transform:translateY(calc((1 - min(1,calc(var(--p,0)*1.6)))*24vh)) scale(calc(1.15 - var(--p,0)*.3));-webkit-mask-image:radial-gradient(closest-side,#000 78%,transparent);mask-image:radial-gradient(closest-side,#000 78%,transparent)}
-.pd-hero.bleed .pd-img{width:100%;height:100%;top:50%;object-fit:cover;-webkit-mask-image:none;mask-image:none;transform:scale(calc(1.3 - var(--p,0)*.3))}
-.pd-hero.bleed .sticky::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.7),transparent 40%,transparent 60%,rgba(0,0,0,.75));pointer-events:none}
-.pd-info{position:absolute;bottom:6vh;left:0;right:0;z-index:2;padding:0 22px;opacity:clamp(0,calc((var(--p,0) - .45)*3),1);transform:translateY(calc(clamp(0,calc((1 - var(--p,0))*2),1)*30px))}
+.pd-name{position:absolute;top:max(13vh,124px);left:0;right:0;padding:0 16px;font-size:clamp(52px,12vw,168px);font-weight:700;letter-spacing:-.055em;line-height:.92;transform:scale(calc(1 - var(--p,0)*.3));opacity:calc(1 - var(--p,0)*.6);text-wrap:balance}
+.pd-hero .v3d{position:absolute;left:0;right:0;top:20vh;bottom:17vh;transform:translateY(calc((1 - min(1,calc(var(--p,0)*1.5)))*14vh))}
+.pd-info{position:absolute;bottom:6vh;left:0;right:0;z-index:2;padding:0 22px;opacity:clamp(0,calc((var(--p,0) - .5)*3),1);transform:translateY(calc(clamp(0,calc((1 - var(--p,0))*2),1)*30px))}
 .pd-info .sub{margin:0 0 6px}
 .pd-info .from{margin:0 0 18px}
 .pd-feats{padding:120px 0;background:var(--bg)}
@@ -248,35 +244,40 @@ section.sec.dark{background:var(--dark);color:var(--dark-ink)}
 .feat h3{font-size:clamp(32px,4.4vw,52px);font-weight:600;letter-spacing:-.035em;line-height:1.05;margin-bottom:16px;text-wrap:balance;opacity:calc(.2 + var(--v,1)*.8);transform:translateY(calc((1 - var(--v,1))*30px))}
 .feat .p{font-size:19px;opacity:calc(var(--v,1));transform:translateY(calc((1 - var(--v,1))*40px))}
 .crop{aspect-ratio:1;border-radius:var(--radius);overflow:hidden;background:var(--pbg);clip-path:inset(calc((1 - var(--v,1))*12%) round var(--radius))}
-.crop img{width:100%;height:100%;object-fit:cover;transform-origin:var(--ox) var(--oy);transform:scale(calc(var(--z)*(1.25 - var(--v,1)*.25)))}
-.explore{background:var(--pbg);color:var(--pfg);padding:110px 0;text-align:center;overflow:hidden}
+.crop img{width:100%;height:100%;object-fit:cover;transform:scale(calc(1.2 - var(--v,1)*.2)) rotate(calc((1 - var(--v,1))*6deg))}
+.explore{background:var(--pbg);color:var(--pfg);padding:110px 0 90px;text-align:center;overflow:hidden}
 .explore .p{color:inherit;opacity:.7}
-.stage{position:relative;width:min(560px,100%);margin:44px auto 0;perspective:1200px;touch-action:pan-y;cursor:grab;user-select:none;-webkit-user-select:none}
+.stage{position:relative;width:min(760px,100%);aspect-ratio:1.25;margin:28px auto 0;touch-action:pan-y;cursor:grab;user-select:none;-webkit-user-select:none}
 .stage.grabbing{cursor:grabbing}
-.stage-in{position:relative;border-radius:var(--radius);overflow:hidden;transform-style:preserve-3d;will-change:transform;box-shadow:0 30px 80px rgba(0,0,0,.18)}
-.stage-in img{width:100%;aspect-ratio:1;object-fit:cover;pointer-events:none;transition:transform .55s var(--ease)}
-.stage-in.zoom img{transform:scale(1.7)}
-.stage .glare{opacity:.8}
-.hs{position:absolute;z-index:3;width:32px;height:32px;translate:-50% -50%;border-radius:50%;background:rgba(255,255,255,.92);color:#1d1d1f;display:grid;place-items:center;box-shadow:0 4px 14px rgba(0,0,0,.25);transition:transform .35s var(--ease),background .2s,opacity .3s}
-.hs::before{content:"";position:absolute;inset:-6px;border-radius:50%;border:2px solid rgba(255,255,255,.8);animation:pulse 2s ease-out infinite}
+.hs{position:absolute;left:0;top:0;z-index:3;width:32px;height:32px;margin:-16px 0 0 -16px;border-radius:50%;background:rgba(255,255,255,.92);color:#1d1d1f;display:grid;place-items:center;box-shadow:0 4px 14px rgba(0,0,0,.25);transition:opacity .3s,background .2s,scale .3s var(--ease);will-change:transform}
+.hs::before{content:"";position:absolute;inset:-6px;border-radius:50%;border:2px solid rgba(255,255,255,.85);animation:pulse 2s ease-out infinite}
 .hs::after{content:"+";font-size:20px;line-height:1;transition:transform .35s var(--ease)}
 .hs.on{background:var(--accent);color:#fff}
 .hs.on::after{transform:rotate(45deg)}
-.hs:active{transform:scale(.88)}
+.hs:active{scale:.88}
+.hs.away{opacity:0;pointer-events:none}
 @keyframes pulse{0%{transform:scale(.8);opacity:1}100%{transform:scale(1.7);opacity:0}}
-.stage-in.zoom .hs{opacity:0;pointer-events:none}
-.hs-card{position:absolute;z-index:4;width:min(240px,70%);padding:14px 16px;border-radius:16px;background:rgba(255,255,255,.95);color:#1d1d1f;text-align:left;font-size:13px;line-height:1.4;box-shadow:0 12px 40px rgba(0,0,0,.2);transform-origin:var(--tox,0) var(--toy,0);animation:pop .4s var(--ease)}
+.hs-card{position:absolute;z-index:4;width:min(250px,64%);padding:14px 16px;border-radius:16px;background:rgba(255,255,255,.95);color:#1d1d1f;text-align:left;font-size:13px;line-height:1.4;box-shadow:0 12px 40px rgba(0,0,0,.2);animation:pop .4s var(--ease);pointer-events:none}
 .hs-card b{display:block;font-size:15px;margin-bottom:3px}
 @keyframes pop{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:none}}
-.stage-tools{display:flex;justify-content:center;gap:10px;margin-top:20px;flex-wrap:wrap}
-.tool{padding:9px 16px;border-radius:980px;font-size:13px;font-weight:500;background:rgba(127,127,127,.16);transition:background .2s,transform .12s}
+.stage-hint{white-space:nowrap;position:absolute;left:50%;bottom:6px;translate:-50% 0;font-size:12px;padding:7px 12px;border-radius:980px;background:rgba(127,127,127,.18);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);display:flex;gap:8px;align-items:center;transition:opacity .5s;pointer-events:none}
+.stage-hint svg{width:16px;height:16px}
+.stage.touched .stage-hint{opacity:0}
+.stage-tools{display:flex;justify-content:center;gap:10px;margin-top:22px;flex-wrap:wrap}
+.tool{padding:10px 16px;border-radius:980px;font-size:13px;font-weight:500;background:rgba(127,127,127,.16);transition:background .2s,transform .12s;display:inline-flex;align-items:center;gap:8px}
 .tool:hover{background:rgba(127,127,127,.26)}
 .tool:active{transform:scale(.95)}
+.tool.on{background:var(--accent);color:#fff}
+.live-sw{display:flex;justify-content:center;gap:14px;margin-top:22px;flex-wrap:wrap}
+.live-sw button{width:30px;height:30px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(0,0,0,.18);transition:transform .2s var(--ease),box-shadow .2s}
+.live-sw button.on{box-shadow:inset 0 0 0 1px rgba(0,0,0,.18),0 0 0 2px var(--pbg),0 0 0 4px var(--accent)}
+.live-sw button:active{transform:scale(.88)}
+.live-label{font-size:14px;opacity:.7;margin-top:10px;min-height:20px}
 .buy{display:grid;grid-template-columns:1.1fr 1fr;gap:56px;align-items:start}
 .buy-media{position:sticky;top:130px;border-radius:var(--radius);overflow:hidden;background:var(--pbg);aspect-ratio:1}
-.buy-media img{width:100%;height:100%;object-fit:cover}
+.buy-media img{width:100%;height:100%;object-fit:contain}
 .buy-media.bump img{animation:bumpimg .5s var(--ease)}
-@keyframes bumpimg{40%{transform:scale(.94)}}
+@keyframes bumpimg{40%{transform:scale(.94) rotate(-3deg)}}
 .buy h2{font-size:clamp(32px,4vw,48px);font-weight:600;letter-spacing:-.035em;line-height:1.05}
 .buy-price{font-size:21px;margin:10px 0 6px}
 .buy-ship{font-size:14px;color:var(--ink-2);margin-bottom:12px}
@@ -319,7 +320,7 @@ section.sec.dark{background:var(--dark);color:var(--dark-ink)}
 .empty{text-align:center;color:var(--ink-2);padding:60px 0;font-size:17px}
 .line{display:flex;gap:14px;align-items:center;padding:16px 0;border-bottom:1px solid rgba(0,0,0,.06);animation:slideIn .45s var(--ease)}
 @keyframes slideIn{from{opacity:0;transform:translateX(24px)}}
-.line img{width:60px;height:60px;border-radius:12px;object-fit:cover;flex:0 0 60px}
+.line img{width:60px;height:60px;border-radius:12px;object-fit:contain;flex:0 0 60px;background:var(--c)}
 .line-info{flex:1;min-width:0}
 .line-info b{display:block;font-size:15px;font-weight:600}
 .line-info span{font-size:12px;color:var(--ink-3)}
@@ -345,7 +346,7 @@ section.sec.dark{background:var(--dark);color:var(--dark-ink)}
 .pick{position:fixed;left:50%;top:50%;width:min(460px,calc(100vw - 32px));max-height:calc(100vh - 32px);overflow:auto;background:#fff;color:var(--ink);border-radius:var(--radius);padding:28px;z-index:220;transform:translate(-50%,-46%) scale(.94);opacity:0;pointer-events:none;transition:transform .45s var(--ease),opacity .25s var(--ease);box-shadow:0 30px 80px rgba(0,0,0,.2)}
 .pick.on{transform:translate(-50%,-50%);opacity:1;pointer-events:auto}
 .pick-top{display:flex;gap:16px;align-items:center;margin-bottom:6px}
-.pick-top img{width:84px;height:84px;border-radius:16px;object-fit:cover}
+.pick-top img{width:84px;height:84px;border-radius:16px;object-fit:contain;background:var(--c)}
 .pick h3{font-size:22px;font-weight:600;letter-spacing:-.02em}
 .pick-price{font-size:17px;color:var(--ink-2);margin-top:2px}
 .pick .group-label{font-size:14px;margin:18px 0 10px}
@@ -355,7 +356,6 @@ section.sec.dark{background:var(--dark);color:var(--dark-ink)}
 .toast{position:fixed;left:50%;bottom:calc(28px + env(safe-area-inset-bottom,0px));transform:translate(-50%,24px);opacity:0;background:rgba(29,29,31,.92);color:#fff;padding:12px 20px;border-radius:980px;font-size:14px;z-index:300;transition:transform .45s var(--ease),opacity .3s;pointer-events:none;max-width:calc(100vw - 32px);text-align:center}
 .toast.on{transform:translate(-50%,0);opacity:1}
 
-/* Pied de page */
 footer{background:var(--bg-alt);padding:40px 0 24px;font-size:12px;color:var(--ink-2);line-height:1.6}
 .foot-top{padding-bottom:18px;border-bottom:1px solid var(--line);margin-bottom:24px}
 .foot-cols{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;margin-bottom:28px}
@@ -364,16 +364,11 @@ footer{background:var(--bg-alt);padding:40px 0 24px;font-size:12px;color:var(--i
 .foot-cols a:hover{text-decoration:underline}
 .foot-bottom{border-top:1px solid var(--line);padding-top:16px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
 
-/* Apparitions */
 .js .rv{opacity:0;transform:translateY(32px);transition:opacity 1s var(--ease),transform 1s var(--ease)}
 .js .rv.in{opacity:1;transform:none}
 .rv.d1{transition-delay:.08s}.rv.d2{transition-delay:.16s}.rv.d3{transition-delay:.24s}
-
-/* Transitions entre vues */
 ::view-transition-group(hero-img){animation-duration:.6s;animation-timing-function:cubic-bezier(.22,1,.36,1)}
 ::view-transition-old(root),::view-transition-new(root){animation-duration:.3s}
-
-/* Mouvement réduit : scènes statiques */
 html.rm .scene{height:auto!important}
 html.rm .sticky{position:relative;height:auto;min-height:100svh;padding-block:96px}
 html.rm .hg-scene .sticky{overflow-x:auto}
@@ -382,8 +377,6 @@ html.rm .words span{opacity:1}
   *,*::before,*::after{animation:none!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
   .js .rv{opacity:1;transform:none}
 }
-
-/* Responsive */
 @media (max-width:860px){
   .tabs{display:none}
   .burger{display:grid}
@@ -407,6 +400,7 @@ html.rm .words span{opacity:1}
   .foot-cols{grid-template-columns:1fr 1fr}
   .pnav b{font-size:17px}
   .shop-help{text-align:left}
+  .stage{aspect-ratio:.9}
 }
 @media (max-width:560px){
   .tiles,.grid-2{padding:0;gap:0}
@@ -451,12 +445,12 @@ html.rm .words span{opacity:1}
 
 <!-- ═══ ACCUEIL ═══ -->
 <div class="view" data-view="accueil">
-  <section class="scene hero-scene on-dark" data-scene>
+  <section class="scene hero-scene on-dark" data-scene id="homeHero">
     <div class="sticky">
-      <img class="hs-ring" src="img/ring.jpg" alt="" width="900" height="900">
+      <div class="v3d" id="homeV"><img class="ph" data-thumb="ring" alt=""></div>
       <div class="hs-a">
         <h1>Les plus<br>demandés.</h1>
-        <p>Six objets que tout le monde veut cette année.</p>
+        <p>Six objets que tout le monde veut. En 3D, sous tous les angles.</p>
       </div>
       <div class="hs-b">
         <span class="new">Nouveau</span>
@@ -474,7 +468,7 @@ html.rm .words span{opacity:1}
   <section class="scene hg-scene" data-scene data-hg>
     <div class="sticky">
       <div class="hg-head">
-        <div><h2 class="h-sec">Tour d’horizon.</h2><p class="p" style="margin-top:10px">Faites défiler, puis touchez un produit pour l’ouvrir.</p></div>
+        <div><h2 class="h-sec">Tour d’horizon.</h2><p class="p" style="margin-top:10px">Faites défiler, puis touchez un produit pour le faire pivoter en 3D.</p></div>
         <a href="#boutique" class="link">Tout voir dans la boutique</a>
       </div>
       <div class="hg-track" id="hgTrack"></div>
@@ -484,22 +478,7 @@ html.rm .words span{opacity:1}
 
   <section class="scene words-scene" data-scene data-words>
     <div class="sticky">
-      <p class="words" id="words">Choisissez parmi les objets les plus demandés du moment. Commandez en deux minutes. Recevez votre colis en <span class="hl">24 heures</span>, livraison offerte dès 50 francs, et changez d’avis pendant <span class="hl">30 jours</span>.</p>
-    </div>
-  </section>
-
-  <section class="sec dark center on-dark" id="ringStats">
-    <div class="wrap">
-      <p class="new rv">Nuvo Ring</p>
-      <h2 class="rv d1"><span class="big-num grad"><span data-count="7">7</span> jours</span></h2>
-      <p class="sub rv d2" style="max-width:640px;margin:20px auto 0;color:var(--dark-2-ink)">d’autonomie dans un anneau de titane de 4 grammes. Sommeil, fréquence cardiaque et récupération, sans écran et sans abonnement.</p>
-      <div class="press" data-open="ring" data-par><img class="ring-spin" src="img/ring.jpg" alt="Nuvo Ring" width="900" height="900"></div>
-      <div class="stats">
-        <div class="stat rv"><b><span data-count="4">4</span> g</b><span>Titane brossé. On oublie qu’on la porte.</span></div>
-        <div class="stat rv d1"><b>24/7</b><span>Suivi du sommeil, du pouls et de la température cutanée.</span></div>
-        <div class="stat rv d2"><b><span data-count="100">100</span> m</b><span>Étanche. Douche, piscine, mer.</span></div>
-        <div class="stat rv d3"><b><span data-count="0">0</span> CHF</b><span>par mois. Toutes les fonctions, sans abonnement.</span></div>
-      </div>
+      <p class="words" id="words">Choisissez parmi les objets les plus demandés du moment. Faites-les pivoter, changez leur couleur en direct. Recevez votre colis en <span class="hl">24 heures</span>, livraison offerte dès 50 francs, et changez d’avis pendant <span class="hl">30 jours</span>.</p>
     </div>
   </section>
 
@@ -559,7 +538,7 @@ html.rm .words span{opacity:1}
   </section>
 </div>
 
-<!-- ═══ PRODUIT (rempli par le script) ═══ -->
+<!-- ═══ PRODUIT ═══ -->
 <div class="view" data-view="produit" id="pdView"></div>
 
 <!-- ═══ AIDE ═══ -->
@@ -571,7 +550,7 @@ html.rm .words span{opacity:1}
         <details open><summary>Quels sont les délais de livraison ?</summary><p>Les commandes passées avant 14 h sont expédiées le jour même (jours ouvrés). Comptez 1 à 3 jours ouvrés en Suisse et 3 à 6 jours en Europe.</p></details>
         <details><summary>Comment fonctionne le paiement ?</summary><p>Après votre commande, vous recevez un email de confirmation avec un lien de paiement Twint ou par carte, ou nos coordonnées bancaires pour un virement. L’envoi part dès réception du paiement.</p></details>
         <details><summary>Puis-je retourner un produit ?</summary><p>Oui, vous avez 30 jours après réception pour nous retourner un produit dans son emballage d’origine. L’étiquette de retour est offerte.</p></details>
-        <details><summary>Comment choisir la taille de la Nuvo Ring ?</summary><p>Choisissez votre taille habituelle de bague. En cas de doute, demandez le kit de mesure gratuit dans votre commande : on vous l’envoie avant la bague.</p></details>
+        <details><summary>Comment choisir la taille de la Nuvo Ring ou de la Nuvo Watch ?</summary><p>Pour la bague, choisissez votre taille habituelle ; en cas de doute, demandez le kit de mesure gratuit. Pour la montre, le boîtier de 41 mm convient aux poignets fins, celui de 45 mm aux poignets plus larges.</p></details>
         <details><summary>La batterie Nuvo Mag est-elle compatible avec mon téléphone ?</summary><p>Elle s’aimante sur tous les smartphones compatibles avec la charge sans fil magnétique. Pour les autres, un anneau magnétique adhésif est inclus.</p></details>
       </div>
       <div class="contact">
@@ -587,7 +566,7 @@ html.rm .words span{opacity:1}
 
 <footer>
   <div class="wrap">
-    <p class="foot-top">Prix en CHF, TVA incluse. Les caractéristiques et visuels des produits sont donnés à titre indicatif. Stocks limités sur les produits les plus demandés.</p>
+    <p class="foot-top">Prix en CHF, TVA incluse. Les caractéristiques et rendus 3D des produits sont donnés à titre indicatif. Stocks limités sur les produits les plus demandés.</p>
     <div class="foot-cols">
       <div><h4>Produits</h4><div id="footProducts"></div></div>
       <div><h4>Boutique</h4><a href="#boutique">Tous les produits</a><a href="#accueil">Nouveautés</a></div>
@@ -627,84 +606,91 @@ html.rm .words span{opacity:1}
   <div class="pick-top"><img id="pickImg" alt=""><div><h3 id="pickTitle"></h3><div class="pick-price" id="pickPrice"></div></div></div>
   <div id="pickGroups"></div>
   <button class="btn" id="pickAdd">Ajouter au panier</button>
-  <a class="link" id="pickMore" href="#accueil">Voir la fiche produit</a>
+  <a class="link" id="pickMore" href="#accueil">Voir en 3D</a>
 </div>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 /* ═══ Réglages boutique — modifiez ici ═══ */
 const STORE_EMAIL = 'contact@nuvo-store.ch';   // adresse qui reçoit les commandes
 const FREE_SHIPPING = 50, SHIPPING = 7.90;
 
-/* Produits : z = [origine X %, origine Y %, zoom] pour les gros plans ; hotspots en % de l'image */
+/* Produits. view = angle du rendu (yaw, pitch en radians, zoom) ; feats[].view = gros plan rendu en 3D */
 const PRODUCTS = {
-  ring: {name:'Nuvo Ring', price:199, img:'img/ring.jpg', cat:'Santé', tag:'Nouveau', bg:'#000', dark:true,
-    tagline:'Votre santé. À votre doigt.', short:'Sommeil, pouls, 7 jours',
+  ring: {name:'Nuvo Ring', price:199, cat:'Santé', tag:'Nouveau', bg:'#0b0b0c', dark:true,
+    tagline:'Votre santé. À votre doigt.', short:'Sommeil, pouls, 7 jours', action:'Voir l’intérieur',
     desc:'Bague connectée en titane. Sommeil, pouls, température. 7 jours d’autonomie.',
-    options:{Finition:[['Titane noir','#2b2b2d'],['Titane argent','#c9c9cc'],['Or','#d4b06a']], Taille:['6','7','8','9','10','11','12','13']},
+    options:{Finition:[['Titane noir','#3a3a3d'],['Titane argent','#c9cacd'],['Or','#d8b46e']], Taille:['6','7','8','9','10','11','12','13']},
+    view:{yaw:.65, pitch:.28, zoom:1},
     feats:[
-      {t:'Titane. 4 grammes.', d:'Un anneau en titane brossé si léger qu’on oublie qu’on le porte, jour et nuit.', z:[62,45,1.7]},
-      {t:'Votre sommeil, décodé.', d:'Phases de sommeil, fréquence cardiaque et température cutanée, analysées chaque matin dans l’app.', z:[38,48,2.4]},
-      {t:'7 jours sans recharger.', d:'Une semaine d’autonomie, et une charge complète en 80 minutes sur sa base.', z:[50,85,1.6]}],
-    hotspots:[{x:39,y:36,t:'Capteurs optiques',d:'Mesurent le pouls et l’oxygène sanguin, en continu.'},{x:66,y:48,t:'Titane brossé',d:'Résiste aux rayures, hypoallergénique.'},{x:39,y:60,t:'Capteur de température',d:'Détecte les variations pendant la nuit.'}],
+      {t:'Titane. 4 grammes.', d:'Un anneau en titane brossé si léger qu’on oublie qu’on le porte, jour et nuit.', view:{yaw:.2, pitch:.05, zoom:1.6, ty:.45}},
+      {t:'Votre sommeil, décodé.', d:'Phases de sommeil, fréquence cardiaque et température cutanée, analysées chaque matin dans l’app.', view:{yaw:.9, pitch:.75, zoom:1.9, ty:-.5}},
+      {t:'7 jours sans recharger.', d:'Une semaine d’autonomie, et une charge complète en 80 minutes sur sa base.', view:{yaw:1.57, pitch:.1, zoom:1.15}}],
+    hotspots:[{t:'Capteurs optiques',d:'Mesurent le pouls et l’oxygène sanguin, en continu.'},{t:'Titane brossé',d:'Résiste aux rayures, hypoallergénique.'},{t:'Capteur de température',d:'Détecte les variations pendant la nuit.'}],
     specs:[['7','jours','Autonomie'],['4','g','Poids'],['100','m','Étanchéité'],['8','tailles','Du 6 au 13']]},
-  buds: {name:'Nuvo Buds', price:89, img:'img/buds.jpg', cat:'Audio', tag:'Best-seller', bg:'#f1f2f5',
-    tagline:'Le silence, à la demande.', short:'Réduction de bruit, 32 h',
+  buds: {name:'Nuvo Buds', price:89, cat:'Audio', tag:'Best-seller', bg:'#f2f1ee',
+    tagline:'Le silence, à la demande.', short:'Réduction de bruit, 32 h', action:'Ouvrir le boîtier',
     desc:'Écouteurs à réduction de bruit active. Jusqu’à 32 h avec le boîtier.',
-    options:{Couleur:[['Sable','#d8cfc2'],['Minuit','#1f2024'],['Brume','#c7d3dc']]},
+    options:{Couleur:[['Sable','#d9cfc1'],['Minuit','#2b2c31'],['Brume','#c4d1db']]},
+    view:{yaw:-.45, pitch:.42, zoom:1},
     feats:[
-      {t:'Le bruit s’efface.', d:'La réduction de bruit active coupe le métro, l’open space et l’avion. Un toucher, et le mode transparence vous rend le monde.', z:[30,66,2.2]},
-      {t:'32 heures dans la poche.', d:'8 heures par charge, et trois recharges complètes dans le boîtier. Dix minutes suffisent pour une heure d’écoute.', z:[58,40,1.6]},
-      {t:'Pensés pour bouger.', d:'Trois tailles d’embouts et une résistance IPX5 à la sueur et à la pluie.', z:[70,74,2.2]}],
-    hotspots:[{x:22,y:63,t:'Embouts en silicone',d:'Trois tailles incluses pour une isolation parfaite.'},{x:58,y:36,t:'Boîtier de charge',d:'USB-C et recharge sans fil.'},{x:62,y:72,t:'Commandes tactiles',d:'Lecture, appels et mode transparence.'}],
+      {t:'Le bruit s’efface.', d:'La réduction de bruit active coupe le métro, l’open space et l’avion. Un toucher, et le mode transparence vous rend le monde.', view:{yaw:-.9, pitch:.3, zoom:2, tx:-.55, ty:-.35}},
+      {t:'32 heures dans la poche.', d:'8 heures par charge, et trois recharges complètes dans le boîtier. Dix minutes suffisent pour une heure d’écoute.', view:{yaw:0, pitch:.75, zoom:1.35, ty:.1}},
+      {t:'Pensés pour bouger.', d:'Trois tailles d’embouts et une résistance IPX5 à la sueur et à la pluie.', view:{yaw:.6, pitch:.2, zoom:2.1, tx:.5, ty:-.35}}],
+    hotspots:[{t:'Embouts en silicone',d:'Trois tailles incluses pour une isolation parfaite.'},{t:'Boîtier de charge',d:'USB-C et recharge sans fil.'},{t:'Commandes tactiles',d:'Lecture, appels et mode transparence.'}],
     specs:[['32','h','Avec le boîtier'],['8','h','Par charge'],['5','','Bluetooth 5.3'],['3','tailles','D’embouts']]},
-  glow: {name:'Nuvo Glow', price:149, img:'img/mask.jpg', cat:'Beauté', tag:'Le plus offert', bg:'#f0ccce',
-    tagline:'L’institut de beauté, à la maison.', short:'LED rouge, 10 min/jour',
-    desc:'Masque LED rouge et proche infrarouge. Séances de 10 minutes, sans fil.',
-    options:{},
+  watch: {name:'Nuvo Watch', price:249, cat:'Santé', tag:'Le plus demandé', bg:'#f5f5f7',
+    tagline:'Plus lumineuse. Plus intelligente.', short:'GPS, santé, 3 jours', action:'Changer de cadran',
+    desc:'Montre connectée en aluminium. Écran toujours allumé, GPS, suivi santé et 3 jours d’autonomie.',
+    options:{Boîtier:[['Minuit','#2f3238'],['Argent','#d8d9dc'],['Rose','#e8cbc0']], Bracelet:[['Minuit','#2b2e37'],['Lumière stellaire','#e6dfd2'],['Bleu orage','#4f6f94'],['Rouge','#b5313b']], Taille:['41 mm','45 mm']},
+    view:{yaw:-.5, pitch:.1, zoom:1},
     feats:[
-      {t:'La lumière qui prend soin.', d:'LED rouges et proche infrarouge, réparties sur tout le visage pour une routine éclat à la maison.', z:[48,40,2.2]},
-      {t:'Souple comme une seconde peau.', d:'Un silicone médical qui épouse les traits du visage, avec des sangles réglables.', z:[24,45,2]},
-      {t:'10 minutes, c’est tout.', d:'Une séance par jour, sans fil, pendant que vous lisez ou regardez une série. Arrêt automatique.', z:[64,65,2.3]}],
-    hotspots:[{x:49,y:38,t:'Zone des yeux',d:'Ouvertures protégées, LED à intensité douce.'},{x:22,y:42,t:'Sangles réglables',d:'Maintien confortable, sans pression.'},{x:65,y:64,t:'LED sur tout le visage',d:'Rouge et proche infrarouge combinés.'}],
-    specs:[['10','min','Par séance'],['4','','Longueurs d’onde'],['0','fil','Batterie intégrée'],['2','ans','Garantie']]},
-  mag: {name:'Nuvo Mag', price:39, img:'img/power.jpg', cat:'Charge', tag:'Petit prix', bg:'#f2f2f4',
-    tagline:'Clic. Ça charge.', short:'10 000 mAh, magnétique',
+      {t:'Un écran qui ne dort jamais.', d:'Toujours allumé, jusqu’à 2000 nits en plein soleil, et lisible d’un simple coup d’œil.', view:{yaw:0, pitch:0, zoom:1.7, ty:.05}},
+      {t:'La couronne, au doigt et à l’œil.', d:'Faites défiler, zoomez, validez. Une couronne crantée précise, en aluminium usiné.', view:{yaw:-1.25, pitch:.05, zoom:2.4, tx:.5, ty:.18}},
+      {t:'Votre santé, en continu.', d:'Fréquence cardiaque, oxygène sanguin, sommeil et détection des chutes, grâce aux capteurs au dos.', view:{yaw:2.7, pitch:.15, zoom:1.6}}],
+    hotspots:[{t:'Écran toujours allumé',d:'Jusqu’à 2000 nits, verre renforcé.'},{t:'Couronne crantée',d:'Navigation précise et retour haptique.'},{t:'Bracelet sport',d:'Fluoroélastomère doux, résistant à la sueur.'},{t:'Capteurs santé',d:'Pouls, oxygène sanguin et température.'}],
+    specs:[['3','jours','Autonomie'],['2000','nits','Luminosité'],['50','m','Étanchéité'],['32','g','Poids (41 mm)']]},
+  max: {name:'Nuvo Max', price:199, cat:'Audio', tag:'Tendance', bg:'#e6ecf1',
+    tagline:'Le son, en grand.', short:'Casque, réduction de bruit, 40 h', action:'Vue de profil',
+    desc:'Casque circum-auriculaire à réduction de bruit active, coussinets à mémoire de forme et 40 h d’autonomie.',
+    options:{Couleur:[['Argent','#d9dadc'],['Minuit','#34363c'],['Bleu ciel','#a9c1d4'],['Rose','#e6c4be']]},
+    view:{yaw:-.4, pitch:.16, zoom:1},
+    feats:[
+      {t:'Un son qui vous enveloppe.', d:'Des haut-parleurs de 40 mm et une réduction de bruit adaptative, pour la musique comme pour les appels.', view:{yaw:-1.35, pitch:.08, zoom:1.9, tx:.15, ty:-.3}},
+      {t:'Confort longue durée.', d:'Coussinets à mémoire de forme et arceau en maille respirante, pour des heures d’écoute sans pression.', view:{yaw:.15, pitch:.5, zoom:1.6, ty:.45}},
+      {t:'40 heures d’écoute.', d:'Et 5 minutes de charge pour 2 heures de musique. Rangé à plat dans son étui fin.', view:{yaw:.8, pitch:.1, zoom:1.1}}],
+    hotspots:[{t:'Coussinets mémoire de forme',d:'Isolation passive et confort durable.'},{t:'Molette de contrôle',d:'Volume, lecture et appels.'},{t:'Arceau en maille',d:'Répartit le poids, respire.'}],
+    specs:[['40','h','Autonomie'],['40','mm','Haut-parleurs'],['5','micros','Pour les appels'],['385','g','Poids']]},
+  mag: {name:'Nuvo Mag', price:39, cat:'Charge', tag:'Petit prix', bg:'#eef0eb',
+    tagline:'Clic. Ça charge.', short:'10 000 mAh, magnétique', action:'Voir le dos',
     desc:'Batterie magnétique 10 000 mAh, ultra fine. Charge sans fil et USB-C.',
-    options:{Couleur:[['Sauge','#a9bba8'],['Graphite','#3a3a3c'],['Sable','#d8cfc2']]},
+    options:{Couleur:[['Sauge','#a6b8a5'],['Graphite','#3b3c3f'],['Sable','#d6ccbd']]},
+    view:{yaw:.5, pitch:.15, zoom:1},
     feats:[
-      {t:'Elle se fixe toute seule.', d:'Des aimants alignés la plaquent au dos de votre téléphone. Elle charge sans câble, même pendant que vous l’utilisez.', z:[52,50,1.5]},
-      {t:'Fine. Vraiment fine.', d:'12 millimètres d’aluminium anodisé, pour glisser dans une poche de jean.', z:[40,55,2.2]},
-      {t:'Toujours sous les yeux.', d:'Quatre voyants indiquent l’autonomie restante d’une simple pression.', z:[52,76,3]}],
-    hotspots:[{x:52,y:50,t:'Aimants alignés',d:'Un clic, et la charge démarre.'},{x:52,y:77,t:'Indicateur 4 LED',d:'Niveau de charge en un coup d’œil.'},{x:68,y:62,t:'Aluminium anodisé',d:'Léger, solide, agréable en main.'}],
+      {t:'Elle se fixe toute seule.', d:'Des aimants alignés la plaquent au dos de votre téléphone. Elle charge sans câble, même pendant que vous l’utilisez.', view:{yaw:3.4, pitch:.1, zoom:1.15}},
+      {t:'Fine. Vraiment fine.', d:'12 millimètres d’aluminium anodisé, pour glisser dans une poche de jean.', view:{yaw:1.45, pitch:.05, zoom:1.5}},
+      {t:'Toujours sous les yeux.', d:'Quatre voyants indiquent l’autonomie restante d’une simple pression.', view:{yaw:.15, pitch:.1, zoom:2.6, ty:-.36}}],
+    hotspots:[{t:'Indicateur 4 LED',d:'Niveau de charge en un coup d’œil.'},{t:'Port USB-C 20 W',d:'Pour la recharger, ou charger un autre appareil.'},{t:'Aimants alignés',d:'Un clic au dos du téléphone, et la charge démarre.'}],
     specs:[['10000','mAh','Capacité'],['15','W','Sans fil'],['20','W','USB-C'],['12','mm','Épaisseur']]},
-  air: {name:'Nuvo Air 5-en-1', price:129, img:'img/styler.jpg', cat:'Beauté', tag:'Tendance', bg:'#ece4d8',
-    tagline:'Séchez. Bouclez. Lissez.', short:'Sèche, boucle et lisse',
-    desc:'Sèche-cheveux haute vitesse avec embouts boucleur et brosse. Moins de chaleur, plus de brillance.',
-    options:{Couleur:[['Prune & or rose','#5a2a45'],['Bleu nuit & cuivre','#1f2c4a']]},
-    feats:[
-      {t:'Haute vitesse. Moins de chaleur.', d:'Un moteur de 110 000 tours par minute sèche vite sans brûler la fibre.', z:[45,18,2.3]},
-      {t:'Des boucles sans pince.', d:'L’embout boucleur enroule les mèches automatiquement grâce au flux d’air.', z:[26,55,2]},
-      {t:'Brossez, c’est lisse.', d:'La brosse ronde sèche et lisse en un seul geste, pour un brushing de salon.', z:[73,58,2]}],
-    hotspots:[{x:45,y:16,t:'Moteur 110 000 tr/min',d:'Séchage rapide et silencieux.'},{x:26,y:50,t:'Embout boucleur',d:'Boucles définies sans chaleur excessive.'},{x:72,y:55,t:'Brosse ronde',d:'Volume et brillance.'},{x:45,y:40,t:'3 températures',d:'Et un jet d’air froid pour fixer.'}],
-    specs:[['110000','tr/min','Moteur'],['5','embouts','Inclus'],['3','','Températures'],['2','ans','Garantie']]},
-  cinema: {name:'Nuvo Cinema', price:249, img:'img/cinema.jpg', cat:'Maison', tag:'Coup de cœur', bg:'#0d1b2e', dark:true, bleed:true,
-    tagline:'Un écran géant qui tient dans la main.', short:'Full HD, 120 pouces',
+  cinema: {name:'Nuvo Cinema', price:249, cat:'Maison', tag:'Coup de cœur', bg:'#0d1622', dark:true,
+    tagline:'Un écran géant qui tient dans la main.', short:'Full HD, 120 pouces', action:'Allumer',
     desc:'Mini projecteur Full HD avec haut-parleur 360°. Jusqu’à 120 pouces d’image.',
-    options:{},
+    options:{Couleur:[['Craie','#e9e6df'],['Graphite','#45464b']]},
+    view:{yaw:.55, pitch:.18, zoom:1},
     feats:[
-      {t:'Jusqu’à 120 pouces.', d:'Un mur blanc suffit. La mise au point automatique s’occupe du reste.', z:[74,30,1.4]},
-      {t:'Un son qui remplit la pièce.', d:'Un haut-parleur à 360° caché sous le tissu, pour les films comme pour la musique.', z:[27,72,2.4]},
-      {t:'Allumez. Projetez.', d:'Applications de streaming intégrées et 3 heures d’autonomie : du salon au jardin.', z:[33,58,2.4]}],
-    hotspots:[{x:33,y:58,t:'Objectif Full HD',d:'Mise au point et correction automatiques.'},{x:27,y:74,t:'Haut-parleur 360°',d:'Un son ample, sans enceinte en plus.'},{x:72,y:28,t:'Jusqu’à 120 pouces',d:'L’image d’un cinéma, sur votre mur.'}],
+      {t:'Jusqu’à 120 pouces.', d:'Un mur blanc suffit. La mise au point automatique s’occupe du reste.', view:{yaw:.1, pitch:.12, zoom:2.2, ty:.38}},
+      {t:'Un son qui remplit la pièce.', d:'Un haut-parleur à 360° caché sous le tissu, pour les films comme pour la musique.', view:{yaw:-.6, pitch:.05, zoom:1.8, ty:-.2}},
+      {t:'Allumez. Projetez.', d:'Commandes tactiles sur le dessus, applications de streaming intégrées et 3 heures d’autonomie.', view:{yaw:.4, pitch:1.0, zoom:1.7, ty:.4}}],
+    hotspots:[{t:'Objectif Full HD',d:'Mise au point et correction automatiques.'},{t:'Haut-parleur 360°',d:'Un son ample, sans enceinte en plus.'},{t:'Commandes tactiles',d:'Volume, lecture et mise en veille.'}],
     specs:[['120','"','Taille d’image'],['1080','p','Full HD'],['3','h','Autonomie'],['360','°','Son']]},
 };
-const ORDER = ['ring','buds','glow','mag','air','cinema'];
-const CATS = ['Tous','Santé','Audio','Beauté','Charge','Maison'];
-const COMPARE = [['buds',[['Réduction de bruit active','Mode transparence inclus'],['Jusqu’à 32 h','Avec le boîtier'],['IPX5','Sueur et pluie'],['Pour','Trajets, sport, télétravail']]],
-                 ['ring',[['Suivi santé 24/7','Sommeil, pouls, température'],['Jusqu’à 7 jours','D’autonomie'],['100 m','Étanchéité'],['Pour','Mieux dormir, mieux récupérer']]],
-                 ['glow',[['LED rouge et infrarouge','4 longueurs d’onde'],['10 min','Par séance, sans fil'],['Silicone souple','Tous les visages'],['Pour','Une routine soin à la maison']]]];
+const ORDER = ['ring','buds','watch','max','mag','cinema'];
+const CATS = ['Tous','Santé','Audio','Charge','Maison'];
+const COMPARE = [['buds',[['Intra-auriculaires','Réduction de bruit active'],['Jusqu’à 32 h','Avec le boîtier'],['IPX5','Sueur et pluie'],['Pour','Trajets, sport, télétravail']]],
+                 ['max',[['Circum-auriculaire','Réduction de bruit adaptative'],['Jusqu’à 40 h','D’autonomie'],['Mémoire de forme','Coussinets confort'],['Pour','Voyages, studio, longues écoutes']]],
+                 ['watch',[['Montre connectée','Écran toujours allumé'],['Jusqu’à 3 jours','D’autonomie'],['50 m','Étanchéité'],['Pour','Sport, santé, notifications']]]];
 
 const $ = id => document.getElementById(id);
 const chf = n => n.toFixed(2) + ' CHF';
@@ -714,133 +700,465 @@ const fgOf = p => p.dark ? '#f5f5f7' : '#1d1d1f';
 const fmt = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const FINE = matchMedia('(hover: hover) and (pointer: fine)').matches;
+const defaults = p => Object.fromEntries(Object.entries(p.options).map(([g, o]) => [g, colorOf(o[0])[0]]));
 document.documentElement.classList.add('js');
 if (RM) document.documentElement.classList.add('rm');
 
-/* ═══ Ressort (amorti + réponse) : animations interruptibles qui gardent l'élan ═══ */
+/* ══════════════════════════════════════════════════════════════
+   STUDIO 3D — modèles construits en code, matériaux physiques, éclairage studio
+   ══════════════════════════════════════════════════════════════ */
+const T = window.THREE, HAS3D = !!(T && (() => { try { return !!document.createElement('canvas').getContext('webgl'); } catch (e) { return false; } })());
+if (!HAS3D) document.documentElement.classList.add('no3d');
+const col = h => new T.Color(h).convertSRGBToLinear();
+
+function newRenderer(canvas, preserve) {
+  const r = new T.WebGLRenderer({canvas, antialias:true, alpha:true, preserveDrawingBuffer:!!preserve, powerPreference:'high-performance'});
+  r.setClearColor(0x000000, 0);
+  r.outputEncoding = T.sRGBEncoding;
+  r.toneMapping = T.ACESFilmicToneMapping;
+  r.toneMappingExposure = 1.05;
+  r.physicallyCorrectLights = true;
+  return r;
+}
+// Studio photo : pièce neutre + boîtes à lumière (top, côtés, contre-jour), convertie en reflets PBR
+function studioEnv(renderer) {
+  const s = new T.Scene(), pm = new T.PMREMGenerator(renderer);
+  s.add(new T.Mesh(new T.BoxGeometry(10, 10, 10), new T.MeshBasicMaterial({color:new T.Color(.11, .11, .12), side:T.BackSide})));
+  const box = (w, h, x, y, z, i) => { const m = new T.Mesh(new T.PlaneGeometry(w, h), new T.MeshBasicMaterial({color:new T.Color(i, i, i), side:T.DoubleSide})); m.position.set(x, y, z); m.lookAt(0, 0, 0); s.add(m); };
+  box(7, 2.2, 0, 4.8, .6, 9);      // plafonnier
+  box(2, 5, -4.8, .8, 1.6, 5);     // boîte gauche
+  box(2.6, 5, 4.8, .4, -1, 3.2);   // boîte droite
+  box(6, 1.4, 0, 1.2, 4.8, 1.6);   // face
+  box(5, 1, 0, -.4, -4.8, 4.5);    // contre-jour (liseré)
+  box(10, 10, 0, -4.9, 0, .25);    // sol
+  const tex = pm.fromScene(s, .035).texture; pm.dispose(); return tex;
+}
+function canvasTex(w, h, draw, srgb) { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new T.CanvasTexture(c); if (srgb) t.encoding = T.sRGBEncoding; t.anisotropy = 8; return t; }
+let TEX = null;
+function textures() {
+  if (TEX) return TEX;
+  TEX = {
+    brushed: canvasTex(16, 512, (g, w, h) => { for (let y = 0; y < h; y++) { const v = 170 + Math.random() * 85 | 0; g.fillStyle = `rgb(${v},${v},${v})`; g.fillRect(0, y, w, 1); } }),
+    weave: canvasTex(64, 64, (g, w, h) => { g.fillStyle = '#808080'; g.fillRect(0, 0, w, h); for (let y = 0; y < h; y += 4) for (let x = 0; x < w; x += 4) { const o = ((x + y) / 4) % 2; g.fillStyle = o ? '#c8c8c8' : '#3a3a3a'; g.fillRect(x, y, 3, 3); } }),
+    mesh: canvasTex(64, 64, (g, w, h) => { g.fillStyle = '#9a9a9a'; g.fillRect(0, 0, w, h); g.fillStyle = '#4a4a4a'; for (let y = 0; y < h; y += 6) for (let x = (y / 6 % 2) * 3; x < w; x += 6) { g.beginPath(); g.arc(x, y, 1.6, 0, 7); g.fill(); } }),
+    shadow: canvasTex(256, 256, (g, w, h) => { const gr = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2); gr.addColorStop(0, 'rgba(0,0,0,.55)'); gr.addColorStop(.45, 'rgba(0,0,0,.22)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); }),
+    beam: canvasTex(4, 256, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#fff'); gr.addColorStop(.6, '#444'); gr.addColorStop(1, '#000'); g.fillStyle = gr; g.fillRect(0, 0, w, h); }),   // niveaux de gris : lu comme masque de transparence
+  };
+  TEX.weave.wrapS = TEX.weave.wrapT = T.RepeatWrapping; TEX.weave.repeat.set(60, 18);
+  TEX.mesh.wrapS = TEX.mesh.wrapT = T.RepeatWrapping; TEX.mesh.repeat.set(40, 4);
+  TEX.brushed.wrapS = TEX.brushed.wrapT = T.RepeatWrapping;
+  return TEX;
+}
+/* Matériaux (la couleur glisse vers sa cible : changements de coloris animés) */
+const M = {
+  metal: (c, r = .3, extra = {}) => new T.MeshPhysicalMaterial(Object.assign({color:col(c), metalness:1, roughness:r, clearcoat:.15, clearcoatRoughness:.3}, extra)),
+  anod: (c, r = .38) => new T.MeshPhysicalMaterial({color:col(c), metalness:.82, roughness:r, clearcoat:.25, clearcoatRoughness:.35}),
+  plastic: (c, r = .5, cc = .35) => new T.MeshPhysicalMaterial({color:col(c), metalness:0, roughness:r, clearcoat:cc, clearcoatRoughness:.45}),
+  glass: (c = '#060607') => new T.MeshPhysicalMaterial({color:col(c), metalness:0, roughness:.04, clearcoat:1, clearcoatRoughness:.03, reflectivity:.9}),
+  fabric: (c, map) => new T.MeshStandardMaterial({color:col(c), roughness:.95, metalness:0, bumpMap:map, bumpScale:.012}),
+  glow: c => new T.MeshBasicMaterial({color:col(c)}),
+};
+const target = (m, hex, now) => { m.userData.to = col(hex); if (now) m.color.copy(m.userData.to); };
+const tickColors = (mats, dt) => { const k = 1 - Math.exp(-dt * 9); for (const m of mats) if (m.userData.to) m.color.lerp(m.userData.to, k); };
+const swatch = (key, group, label) => { const o = PRODUCTS[key].options[group] || []; const f = o.find(x => colorOf(x)[0] === label); return f && f[1]; };
+
+/* Géométries */
+function rr(w, h, r) { const s = new T.Shape(), a = w / 2 - r, b = h / 2 - r;
+  s.moveTo(-a, -h / 2); s.lineTo(a, -h / 2); s.absarc(a, -b, r, -Math.PI / 2, 0); s.lineTo(w / 2, b); s.absarc(a, b, r, 0, Math.PI / 2);
+  s.lineTo(-a, h / 2); s.absarc(-a, b, r, Math.PI / 2, Math.PI); s.lineTo(-w / 2, -b); s.absarc(-a, -b, r, Math.PI, Math.PI * 1.5); return s; }
+// Fusionne les sommets pour un lissage parfait des chanfreins (les faces avant/arrière gardent leurs normales plates)
+function smoothed(geo, start, count) {
+  const p = geo.attributes.position, map = new Map(), idx = [], pos = [];
+  for (let i = start; i < start + count; i++) {
+    const x = p.getX(i), y = p.getY(i), z = p.getZ(i), k = `${Math.round(x * 2e4)},${Math.round(y * 2e4)},${Math.round(z * 2e4)}`;
+    let id = map.get(k); if (id === undefined) { id = pos.length / 3; map.set(k, id); pos.push(x, y, z); } idx.push(id);
+  }
+  const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals(); return g;
+}
+function sliceGeo(geo, start, count) { const g = new T.BufferGeometry();
+  for (const n of ['position', 'normal', 'uv']) { const a = geo.attributes[n]; if (a) g.setAttribute(n, new T.Float32BufferAttribute(a.array.slice(start * a.itemSize, (start + count) * a.itemSize), a.itemSize)); } return g; }
+// Bloc arrondi chanfreiné (boîtiers, batterie, coques) : renvoie un groupe [faces, flancs lissés]
+function slab(shape, depth, bev, mat, capMat, seg = 8) {
+  const g = new T.ExtrudeGeometry(shape, {depth, bevelEnabled:true, bevelThickness:bev, bevelSize:bev, bevelSegments:seg, curveSegments:40});
+  g.translate(0, 0, -depth / 2);
+  const grp = new T.Group(), [caps, sides] = g.groups;
+  grp.add(new T.Mesh(sliceGeo(g, caps.start, caps.count), capMat || mat), new T.Mesh(smoothed(g, sides.start, sides.count), mat));
+  g.dispose(); return grp;
+}
+// Bande cintrée (bracelets) : une boîte déformée le long d'un arc
+function bentBand(w, len, th, R, mat) {
+  const g = new T.BoxGeometry(w, len, th, 1, 80, 1); g.translate(0, len / 2, 0);
+  const p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) { const y = p.getY(i), z = p.getZ(i), a = y / R; p.setY(i, (R + z) * Math.sin(a)); p.setZ(i, (R + z) * Math.cos(a) - R); }
+  g.computeVertexNormals(); return new T.Mesh(g, mat);
+}
+const lathe = (pts, mat, seg = 128) => new T.Mesh(new T.LatheGeometry(pts.map(([x, y]) => new T.Vector2(x, y)), seg), mat);
+function roundProfile(ri, ro, hw, cr) { const pts = [], corner = (cx, cy, a0) => { for (let i = 0; i <= 10; i++) { const a = a0 + i / 10 * Math.PI / 2; pts.push([cx + Math.cos(a) * cr, cy + Math.sin(a) * cr]); } };
+  corner(ro - cr, -hw + cr, -Math.PI / 2); corner(ro - cr, hw - cr, 0); corner(ri + cr, hw - cr, Math.PI / 2); corner(ri + cr, -hw + cr, Math.PI); pts.push(pts[0].slice()); return pts; }
+// Point d'intérêt : repère 3D + normale (pour masquer le point quand il passe derrière)
+function spot(parent, x, y, z, nx, ny, nz) { const o = new T.Object3D(); o.position.set(x, y, z); parent.add(o); return {m:o, n:new T.Vector3(nx, ny, nz).normalize()}; }
+
+/* ─── Modèles ─── */
+const BUILD = {
+  ring() {
+    const t = textures(), g = new T.Group(), body = new T.Group();
+    const ti = M.metal('#3a3a3d', .34, {roughnessMap:t.brushed, clearcoat:.3, side:T.DoubleSide});
+    const band = lathe(roundProfile(.845, 1, .36, .09), ti, 200); body.add(band);
+    const resin = M.plastic('#0c0c0d', .2, 1); resin.side = T.DoubleSide;
+    body.add(lathe([[.842, -.27], [.842, .27]], resin, 200));
+    const dome = M.glass('#050506'); const led = M.glow('#3dff7a'); const ledR = M.glow('#ff3b30');
+    [[0, 0], [.42, .1], [-.42, -.1]].forEach(([a, y]) => { const b = new T.Mesh(new T.SphereGeometry(.075, 32, 16), dome); b.position.set(.83 * Math.sin(a), y, .83 * Math.cos(a)); b.lookAt(0, y, 0); b.scale.set(1, 1, .45); body.add(b); });
+    [[.18, .06, led], [-.18, -.05, ledR]].forEach(([a, y, m]) => { const l = new T.Mesh(new T.CircleGeometry(.018, 16), m); l.position.set(.838 * Math.sin(a), y, .838 * Math.cos(a)); l.lookAt(0, y, 0); body.add(l); });
+    body.rotation.x = Math.PI / 2; g.add(body);
+    const hs = [spot(body, 0, 0, .8, 0, 0, -1), spot(body, 0, 0, -1.0, 0, 0, -1), spot(body, .83 * Math.sin(.42), .1, .83 * Math.cos(.42), -Math.sin(.42), 0, -Math.cos(.42))];
+    let look = 0;
+    return {root:g, mats:[ti], hotspots:hs,
+      variant(v, now) { target(ti, swatch('ring', 'Finition', v.Finition) || '#3a3a3d', now); },
+      action(vw) { look = !look; vw.lookTo(look ? {yaw:.25, pitch:1.25} : {yaw:.65, pitch:.28}); return look; }};
+  },
+  buds() {
+    const g = new T.Group(), shell = M.plastic('#d9cfc1', .55, .35), inner = M.plastic('#c9bfb1', .7, 0), dark = M.plastic('#1a1a1c', .4, .2), tip = M.plastic('#d6d6d6', .75, 0), steel = M.metal('#e8c27a', .25);
+    const S = [1.25, .62, .95], seam = .47 * Math.PI, sy = Math.cos(seam) * S[1], sr = Math.sin(seam);
+    const base = new T.Mesh(new T.SphereGeometry(1, 96, 64, 0, Math.PI * 2, seam, Math.PI - seam), shell); base.scale.set(...S); g.add(base);
+    const cap = new T.Mesh(new T.CircleGeometry(1, 96), inner); cap.rotation.x = -Math.PI / 2; cap.scale.set(S[0] * sr * .99, S[2] * sr * .99, 1); cap.position.y = sy - .004; g.add(cap);
+    [-.46, .46].forEach(x => { const c = new T.Mesh(new T.CircleGeometry(.27, 48), dark); c.rotation.x = -Math.PI / 2; c.position.set(x, sy - .002, .06); c.scale.set(1, 1.15, 1); g.add(c);
+      [-.04, .04].forEach(dx => { const pin = new T.Mesh(new T.CircleGeometry(.018, 12), steel); pin.rotation.x = -Math.PI / 2; pin.position.set(x + dx, sy - .001, .06); g.add(pin); }); });
+    const seamL = new T.Mesh(new T.TorusGeometry(1, .006, 8, 160), dark); seamL.rotation.x = Math.PI / 2; seamL.scale.set(S[0] * sr * 1.002, S[2] * sr * 1.002, 1); seamL.position.y = sy; g.add(seamL);
+    const pv = new T.Group(); pv.position.set(0, sy, -S[2] * sr); g.add(pv);
+    const lid = new T.Mesh(new T.SphereGeometry(1, 96, 64, 0, Math.PI * 2, 0, seam), shell); lid.scale.set(...S); lid.position.set(0, -sy, S[2] * sr); pv.add(lid);
+    const lcap = new T.Mesh(new T.CircleGeometry(1, 96), inner); lcap.rotation.x = Math.PI / 2; lcap.scale.set(S[0] * sr * .99, S[2] * sr * .99, 1); lcap.position.set(0, .003, S[2] * sr); pv.add(lcap);
+    const led = new T.Mesh(new T.CircleGeometry(.025, 16), M.glow('#ffffff')); led.position.set(0, -.15, S[2] * .985); g.add(led);
+    const bud = () => { const b = new T.Group();
+      const body = new T.Mesh(new T.SphereGeometry(.34, 64, 48), shell); body.scale.set(1, .9, .95); b.add(body);
+      const touch = new T.Mesh(new T.SphereGeometry(.3, 48, 24, 0, Math.PI * 2, 0, .9), M.plastic('#000', .3, .8)); touch.material = shell; touch.rotation.z = Math.PI / 2; touch.position.x = -.06; touch.scale.set(1, .9, .95);
+      const neck = new T.Mesh(new T.CylinderGeometry(.11, .14, .22, 48), shell); neck.rotation.z = Math.PI / 2; neck.position.x = .34; b.add(neck);
+      const t = new T.Mesh(new T.SphereGeometry(.15, 48, 32), tip); t.scale.set(.85, 1, 1); t.position.x = .47; b.add(t);
+      const mic = new T.Mesh(new T.CircleGeometry(.02, 12), dark); mic.position.set(-.1, .2, .26); mic.lookAt(-.3, .6, 1); b.add(mic);
+      return b; };
+    const bl = bud(); bl.position.set(-.7, -.31, 1.0); bl.rotation.set(.1, .7, .25); g.add(bl);
+    const br = bud(); br.position.set(.62, -.33, 1.12); br.rotation.set(-.1, 2.5, -.15); g.add(br);
+    const hs = [spot(bl, .52, 0, 0, 1, .2, .3), spot(lid, 0, S[1] * .98, 0, 0, 1, 0), spot(br, -.3, .05, .1, -1, .3, .4)];
+    let open = 0, ang = 0;
+    return {root:g, mats:[shell], hotspots:hs,
+      variant(v, now) { const c = swatch('buds', 'Couleur', v.Couleur) || '#d9cfc1'; target(shell, c, now); },
+      action() { open = !open; return open; },
+      tick(dt) { const to = open ? -1.95 : 0; ang += (to - ang) * (1 - Math.exp(-dt * 7)); pv.rotation.x = ang; },
+      pose() { open = 0; ang = 0; pv.rotation.x = 0; }};
+  },
+  watch() {
+    const g = new T.Group(), alu = M.metal('#2f3238', .26, {clearcoat:.4}), band = M.plastic('#2b2e37', .62, .12), glass = M.glass(), back = M.glass('#0a0a0b');
+    const W = .82, H = .98, D = .2, B = .055;
+    const caseG = slab(rr(W, H, .24), D, B, alu); g.add(caseG);
+    // Écran : cadran dessiné en direct sur une texture (heure réelle)
+    const fc = document.createElement('canvas'); fc.width = 512; fc.height = 612;
+    const ftex = new T.CanvasTexture(fc); ftex.encoding = T.sRGBEncoding; ftex.anisotropy = 8;
+    const screenMat = new T.MeshPhysicalMaterial({color:0x000000, emissive:0xffffff, emissiveMap:ftex, roughness:.05, clearcoat:1, clearcoatRoughness:.02, metalness:0});
+    const sw = W + B * 2 - .05, sh = H + B * 2 - .05, sg = new T.ShapeGeometry(rr(sw, sh, .27), 40), uv = sg.attributes.uv, sp = sg.attributes.position;
+    for (let i = 0; i < sp.count; i++) uv.setXY(i, sp.getX(i) / sw + .5, sp.getY(i) / sh + .5);
+    const screen = new T.Mesh(sg, screenMat); screen.position.z = D / 2 + B + .002; g.add(screen);
+    const crown = new T.Mesh(new T.CylinderGeometry(.078, .078, .1, 64, 1), M.metal('#2f3238', .45)); crown.rotation.z = Math.PI / 2; crown.position.set(W / 2 + B + .04, .2, 0); g.add(crown);
+    for (let i = 0; i < 28; i++) { const r = new T.Mesh(new T.BoxGeometry(.1, .006, .01), crown.material); const a = i / 28 * Math.PI * 2; r.position.set(W / 2 + B + .04, .2 + Math.cos(a) * .079, Math.sin(a) * .079); r.rotation.x = -a; g.add(r); }
+    const btn = slab(rr(.05, .24, .025), .03, .012, crown.material); btn.rotation.y = Math.PI / 2; btn.position.set(W / 2 + B + .01, -.12, 0); g.add(btn);
+    const sensor = new T.Mesh(new T.SphereGeometry(.5, 64, 24, 0, Math.PI * 2, 0, .62), back); sensor.rotation.x = -Math.PI / 2; sensor.scale.set(1, 1, .32); sensor.position.z = -(D / 2 + B) - .5 * Math.cos(.62) * .32 + .01; g.add(sensor);
+    const ringS = new T.Mesh(new T.TorusGeometry(.13, .008, 12, 64), M.glow('#2a2a2e')); ringS.position.z = -(D / 2 + B) - .06; g.add(ringS);
+    const top = bentBand(.7, 1.45, .075, .78, band); top.position.set(0, H / 2 + B - .03, 0); g.add(top);
+    const bot = bentBand(.7, 1.45, .075, .78, band); bot.rotation.z = Math.PI; bot.position.set(0, -(H / 2 + B - .03), 0); g.add(bot);
+    const hs = [spot(screen, 0, .1, 0, 0, 0, 1), spot(g, W / 2 + B + .09, .2, 0, 1, 0, 0), spot(top, 0, .55, .02, 0, .3, 1), spot(g, 0, 0, -(D / 2 + B) - .1, 0, 0, -1)];
+    let style = 0, last = -1, fixed = null;
+    const draw = () => {
+      const d = fixed || new Date(), x = fc.getContext('2d'), h = d.getHours(), m = d.getMinutes(), s = d.getSeconds();
+      x.fillStyle = '#000'; x.fillRect(0, 0, 512, 612);
+      const font = w => `${w} px -apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif`.replace(' px', 'px');
+      if (style === 0) {
+        [['#fa2d55', 150], ['#a6f20f', 116], ['#22d7ff', 82]].forEach(([c, r], i) => { x.lineWidth = 28; x.lineCap = 'round'; x.strokeStyle = c + '40'; x.beginPath(); x.arc(256, 350, r, 0, 7); x.stroke(); x.strokeStyle = c; x.beginPath(); x.arc(256, 350, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * [.78, .62, .9][i]); x.stroke(); });
+        x.fillStyle = '#fff'; x.textAlign = 'right'; x.font = font('600 78'); x.fillText(`${h}:${String(m).padStart(2, '0')}`, 470, 112);
+        x.textAlign = 'left'; x.fillStyle = '#ff9f0a'; x.font = font('600 30'); x.fillText(d.toLocaleDateString('fr-CH', {weekday:'short'}).toUpperCase() + ' ' + d.getDate(), 48, 104);
+      } else if (style === 1) {
+        x.save(); x.translate(256, 306);
+        for (let i = 0; i < 60; i++) { x.rotate(Math.PI / 30); x.fillStyle = i % 5 === 4 ? '#fff' : '#555'; x.fillRect(-2, -228, i % 5 === 4 ? 5 : 3, i % 5 === 4 ? 26 : 12); }
+        x.fillStyle = '#fff'; x.font = font('600 46'); x.textAlign = 'center'; x.textBaseline = 'middle';
+        [[12, 0, -168], [3, 170, 0], [6, 0, 170], [9, -170, 0]].forEach(([n, a, b]) => x.fillText(n, a, b));
+        const hand = (a, l, w, c) => { x.save(); x.rotate(a); x.fillStyle = c; x.beginPath(); x.roundRect ? x.roundRect(-w / 2, -l, w, l + 18, w / 2) : x.rect(-w / 2, -l, w, l + 18); x.fill(); x.restore(); };
+        hand((h % 12 + m / 60) / 12 * Math.PI * 2, 120, 16, '#fff'); hand((m + s / 60) / 60 * Math.PI * 2, 190, 12, '#fff'); hand(s / 60 * Math.PI * 2, 205, 4, '#ff9f0a');
+        x.fillStyle = '#ff9f0a'; x.beginPath(); x.arc(0, 0, 10, 0, 7); x.fill(); x.restore();
+      } else {
+        const gr = x.createLinearGradient(0, 0, 512, 612); gr.addColorStop(0, '#0a7cff'); gr.addColorStop(.5, '#7b5cff'); gr.addColorStop(1, '#ff5c8a'); x.fillStyle = gr; x.fillRect(0, 0, 512, 612);
+        x.fillStyle = 'rgba(255,255,255,.95)'; x.textAlign = 'center'; x.font = font('700 230'); x.fillText(String(h).padStart(2, '0'), 256, 290); x.fillText(String(m).padStart(2, '0'), 256, 520);
+      }
+      ftex.needsUpdate = true;
+    };
+    return {root:g, mats:[alu, band, crown.material], hotspots:hs,
+      variant(v, now) { const c = swatch('watch', 'Boîtier', v.Boîtier) || '#2f3238'; target(alu, c, now); target(crown.material, c, now); target(band, swatch('watch', 'Bracelet', v.Bracelet) || '#2b2e37', now); g.scale.setScalar(v.Taille === '45 mm' ? 1.04 : 1); },
+      action() { style = (style + 1) % 3; draw(); return false; },
+      tick() { const s = Math.floor(Date.now() / 1000); if (!fixed && s !== last) { last = s; draw(); } },
+      pose(o) { fixed = o ? new Date(2026, 8, 9, 10, 9, 30) : null; draw(); }};
+  },
+  max() {
+    const t = textures(), g = new T.Group(), alu = M.anod('#d9dadc', .32), cush = M.fabric('#e9e9ea', t.weave), canopy = M.fabric('#cfd0d2', t.mesh), steel = M.metal('#e6e6e8', .14), dark = M.plastic('#1b1b1d', .6, 0);
+    const pal = {Argent:['#d9dadc', '#e9e9ea', '#cfd0d2'], Minuit:['#34363c', '#2b2c31', '#303136'], 'Bleu ciel':['#a9c1d4', '#c7d6e2', '#b6c8d7'], Rose:['#e6c4be', '#f0dad5', '#e2c8c3']};
+    const cup = side => { const c = new T.Group();
+      const shell = slab(rr(.62, .84, .28), .24, .07, alu); shell.position.z = .1; c.add(shell);
+      const ringShape = rr(.66, .88, .3); ringShape.holes.push(rr(.34, .52, .16));
+      const pad = slab(ringShape, .1, .085, cush, cush, 10); pad.position.z = -.14; c.add(pad);
+      const inner = new T.Mesh(new T.ShapeGeometry(rr(.36, .54, .17), 24), dark); inner.position.z = -.12; inner.rotation.y = Math.PI; c.add(inner);
+      c.rotation.y = side * Math.PI / 2; c.position.set(side * .82, -.32, 0); return c; };
+    const L = cup(-1), R = cup(1); g.add(L, R);
+    const pts = []; for (let i = 0; i <= 40; i++) { const a = i / 40 * Math.PI; pts.push(new T.Vector3(Math.cos(a) * .8, .14 + Math.sin(a) * .98, 0)); }
+    const arc = new T.CatmullRomCurve3(pts);
+    const can = new T.Mesh(new T.TubeGeometry(arc, 120, .085, 24), canopy); can.scale.z = 2.6; g.add(can);
+    const pts2 = pts.map(p => new T.Vector3(p.x * 1.07, .14 + (p.y - .14) * 1.08, 0));
+    const frame = new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(pts2), 140, .028, 16), steel); g.add(frame);
+    [-1, 1].forEach(s => { const arm = new T.Mesh(new T.CylinderGeometry(.03, .03, .26, 24), steel); arm.position.set(s * .86, .12, 0); g.add(arm);
+      const joint = new T.Mesh(new T.SphereGeometry(.05, 24, 16), alu); joint.position.set(s * .86, .02, 0); g.add(joint); });
+    const crownM = new T.Mesh(new T.CylinderGeometry(.06, .06, .08, 48), M.metal('#d9dadc', .35)); crownM.position.set(.9, .16, .2); g.add(crownM);
+    const hs = [spot(L, 0, .2, -.26, 0, 0, -1), spot(g, .9, .22, .2, .4, 1, .2), spot(can, 0, 0, 0, 0, 1, 0)];
+    hs[2].m.position.set(0, 1.12, 0);
+    let side = 0;
+    return {root:g, mats:[alu, cush, canopy, crownM.material], hotspots:hs,
+      variant(v, now) { const p = pal[v.Couleur] || pal.Argent; target(alu, p[0], now); target(crownM.material, p[0], now); target(cush, p[1], now); target(canopy, p[2], now); },
+      action(vw) { side = !side; vw.lookTo(side ? {yaw:-1.57, pitch:.05} : {yaw:-.55, pitch:.12}); return side; }};
+  },
+  mag() {
+    const g = new T.Group(), alu = M.anod('#a6b8a5', .4), port = M.plastic('#111', .5, 0), ringM = M.anod('#a6b8a5', .25);
+    const W = .62, H = .96, D = .08, B = .03;
+    g.add(slab(rr(W, H, .13), D, B, alu));
+    const fz = D / 2 + B + .001;
+    for (let i = 0; i < 4; i++) { const l = new T.Mesh(new T.CircleGeometry(.011, 16), M.glow(i < 3 ? '#ffffff' : '#5a5a5a')); l.position.set(-.06 + i * .04, -.38, fz); g.add(l); }
+    const usb = slab(rr(.11, .036, .018), .02, .004, port); usb.rotation.x = Math.PI / 2; usb.position.set(0, -(H / 2 + B) + .008, 0); g.add(usb);
+    const ring = new T.Mesh(new T.TorusGeometry(.24, .006, 10, 128), ringM); ring.position.z = -fz; g.add(ring);
+    const tick = new T.Mesh(new T.BoxGeometry(.012, .07, .004), ringM); tick.position.set(0, -.31, -fz); g.add(tick);
+    const hs = [spot(g, 0, -.38, fz, 0, 0, 1), spot(g, 0, -(H / 2 + B), 0, 0, -1, .3), spot(g, 0, .24, -fz, 0, 0, -1)];
+    let back = 0;
+    return {root:g, mats:[alu, ringM], hotspots:hs,
+      variant(v, now) { const c = swatch('mag', 'Couleur', v.Couleur) || '#a6b8a5'; target(alu, c, now); target(ringM, c, now); },
+      action(vw) { back = !back; vw.lookTo(back ? {yaw:Math.PI + .4, pitch:.15} : {yaw:.5, pitch:.15}); return back; }};
+  },
+  cinema() {
+    const t = textures(), g = new T.Group(), fab = M.fabric('#c9c5bd', t.weave), white = M.plastic('#e9e6df', .3, .6), black = M.glass('#050506'), base = M.plastic('#2a2a2c', .6, 0);
+    g.add(lathe([[.46, 0], [.515, .02], [.55, .07], [.555, .86]], fab, 160));
+    g.add(lathe([[.556, .855], [.558, 1.16], [.535, 1.22], [.48, 1.252], [0, 1.258]], white, 160));
+    const bottom = new T.Mesh(new T.CircleGeometry(.46, 64), base); bottom.rotation.x = Math.PI / 2; g.add(bottom);
+    const bez = new T.Mesh(new T.CylinderGeometry(.15, .15, .08, 64), black); bez.rotation.x = Math.PI / 2; bez.position.set(0, 1.0, .53); g.add(bez);
+    const lensMat = new T.MeshPhysicalMaterial({color:col('#0b1220'), emissive:col('#7fb6ff'), emissiveIntensity:0, roughness:.03, clearcoat:1, metalness:0});
+    const lens = new T.Mesh(new T.CircleGeometry(.11, 64), lensMat); lens.position.set(0, 1.0, .572); g.add(lens);
+    const ringL = new T.Mesh(new T.TorusGeometry(.13, .008, 12, 64), M.metal('#9a9a9e', .2)); ringL.position.set(0, 1.0, .571); g.add(ringL);
+    const ctl = new T.Mesh(new T.TorusGeometry(.2, .006, 10, 96), M.plastic('#bcb8b0', .4)); ctl.rotation.x = Math.PI / 2; ctl.position.y = 1.259; g.add(ctl);
+    [[-.09, 0], [.09, 0], [0, .09], [0, -.09]].forEach(([x, z]) => { const d = new T.Mesh(new T.CircleGeometry(.014, 12), M.glow('#9c978e')); d.rotation.x = -Math.PI / 2; d.position.set(x, 1.2595, z); g.add(d); });
+    const beamMat = new T.MeshBasicMaterial({color:col('#cfe3ff'), transparent:true, opacity:0, alphaMap:t.beam, depthWrite:false, side:T.DoubleSide});
+    const beam = new T.Mesh(new T.ConeGeometry(.95, 2.8, 64, 1, true), beamMat); beam.rotation.x = -Math.PI / 2; beam.position.set(0, 1.0, .57 + 1.4); g.add(beam);
+    const hs = [spot(g, 0, 1.0, .58, 0, 0, 1), spot(g, .35, .45, .42, .64, 0, .77), spot(g, 0, 1.26, 0, 0, 1, 0)];
+    let on = 0, lv = 0;
+    return {root:g, mats:[white, fab], hotspots:hs, ignoreFit:[beam],
+      variant(v, now) { const dark = v.Couleur === 'Graphite'; target(white, dark ? '#45464b' : '#e9e6df', now); target(fab, dark ? '#55565b' : '#c9c5bd', now); },
+      action(vw) { on = !on; vw.lookTo(on ? {yaw:-1.15, pitch:.12} : {yaw:.55, pitch:.18}); return on; },
+      tick(dt) { lv += ((on ? 1 : 0) - lv) * (1 - Math.exp(-dt * 6)); lensMat.emissiveIntensity = lv * 2.2; beamMat.opacity = lv * .22; beam.visible = lv > .01; }};
+  },
+};
+
+/* Mise en scène commune : centrage, ombre de contact, caméra */
+function stage(key, variant, renderer) {
+  const scene = new T.Scene(); scene.environment = studioEnv(renderer);
+  const key2 = new T.DirectionalLight(0xffffff, 1.4); key2.position.set(2, 4, 3); scene.add(key2);
+  const model = BUILD[key](); model.variant(variant, true);
+  const yawG = new T.Group(), pitchG = new T.Group(); yawG.add(model.root); pitchG.add(yawG); scene.add(pitchG);
+  const ig = model.ignoreFit || [], par = ig.map(o => o.parent); ig.forEach(o => o.parent.remove(o));   // le faisceau ne compte pas dans le cadrage
+  const box = new T.Box3().setFromObject(model.root), c = box.getCenter(new T.Vector3()), sz = box.getSize(new T.Vector3());
+  ig.forEach((o, i) => par[i].add(o));
+  model.root.position.sub(c);
+  const radius = Math.max(sz.x, sz.y, sz.z) * .5 * 1.08;
+  const sh = new T.Mesh(new T.PlaneGeometry(1, 1), new T.MeshBasicMaterial({map:textures().shadow, transparent:true, depthWrite:false, opacity:.9}));
+  sh.rotation.x = -Math.PI / 2; sh.scale.setScalar(Math.max(sz.x, sz.z) * 1.7 + .4); sh.position.y = -sz.y / 2 - .02; scene.add(sh);
+  const cam = new T.PerspectiveCamera(28, 1, .05, 100);
+  return {scene, model, yawG, pitchG, cam, radius, shadow:sh};
+}
+function frame(st, aspect, zoom = 1, tx = 0, ty = 0, lift = .12) {
+  const fov = st.cam.fov * Math.PI / 180, fit = aspect < 1 ? st.radius / aspect : st.radius;
+  const dist = fit / Math.sin(fov / 2) / zoom * 1.32;
+  st.cam.aspect = aspect; st.cam.position.set(tx * st.radius, ty * st.radius + dist * lift, dist); st.cam.lookAt(tx * st.radius, ty * st.radius, 0); st.cam.updateProjectionMatrix();
+}
+
+/* Rendus fixes (vignettes, gros plans, image d'achat) depuis un seul moteur caché */
+let SNAP = null;
+function snap(key, variant, view, size = 800) {
+  if (!HAS3D) return '';
+  if (!SNAP) { const c = document.createElement('canvas'); SNAP = {r:newRenderer(c, true), stages:{}}; }
+  SNAP.r.setPixelRatio(1); SNAP.r.setSize(size, size, false);
+  const st = SNAP.stages[key] || (SNAP.stages[key] = stage(key, variant, SNAP.r));
+  st.model.variant(variant, true); st.model.pose?.(true);
+  st.yawG.rotation.y = view.yaw; st.pitchG.rotation.x = view.pitch;
+  st.shadow.visible = (view.zoom || 1) < 1.3;
+  frame(st, 1, view.zoom || 1, view.tx || 0, view.ty || 0, .06);
+  SNAP.r.render(st.scene, st.cam);
+  return SNAP.r.domElement.toDataURL('image/png');
+}
+const THUMBS = {};
+function fillThumbs(root = document) {
+  root.querySelectorAll('img[data-thumb]').forEach(i => { const u = THUMBS[i.dataset.thumb]; if (u && i.src !== u) i.src = u; });
+}
+
+/* Visionneuse interactive : glisser pour pivoter (élan + résistance), rotation auto, défilement, points d'intérêt */
+class Viewer {
+  constructor(el, key, o = {}) {
+    this.el = el; this.key = key; this.o = Object.assign({interactive:false, auto:true, zoom:1, scroll:null}, o);
+    this.canvas = document.createElement('canvas'); el.appendChild(this.canvas);
+    this.r = newRenderer(this.canvas); this.r.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+    this.st = stage(key, o.variant || defaults(PRODUCTS[key]), this.r);
+    const v = PRODUCTS[key].view; this.yaw = v.yaw; this.pitch = v.pitch; this.rest = {yaw:v.yaw, pitch:v.pitch};
+    this.vy = 0; this.zoomNow = this.o.zoom; this.zoomTo = this.o.zoom; this.idle = 9; this.drag = null; this.p = 0; this.visible = false; this.look = null;
+    this.ro = new ResizeObserver(() => this.resize()); this.ro.observe(el); this.resize();
+    this.io = new IntersectionObserver(([e]) => { this.visible = e.isIntersecting; if (this.visible) this.start(); }, {rootMargin:'100px'}); this.io.observe(el);
+    if (this.o.interactive) this.bind();
+    this.hs = [];
+    this.last = performance.now();
+  }
+  resize() { const w = this.el.clientWidth, h = this.el.clientHeight; if (!w || !h) return; this.w = w; this.h = h; this.r.setSize(w, h, false); this.dirty = true; }
+  bind() {
+    const el = this.el, hist = [];
+    el.addEventListener('pointerdown', e => {
+      if (e.target.closest('.hs')) return;
+      this.drag = {x:e.clientX, y:e.clientY, yaw:this.yaw, pitch:this.pitch, moved:false}; hist.length = 0; hist.push({x:e.clientX, t:e.timeStamp});
+      el.setPointerCapture(e.pointerId); el.classList.add('grabbing', 'touched'); this.vy = 0; this.look = null; this.start();
+    });
+    el.addEventListener('pointermove', e => {
+      const d = this.drag; if (!d) return;
+      const dx = e.clientX - d.x, dy = e.clientY - d.y; if (Math.abs(dx) + Math.abs(dy) > 5) d.moved = true;
+      this.yaw = d.yaw + dx * .011;
+      const p = d.pitch + dy * .007, lim = 1.1;  // résistance élastique au-delà de la limite
+      this.pitch = Math.abs(p) < lim ? p : Math.sign(p) * (lim + (Math.abs(p) - lim) * .25);
+      hist.push({x:e.clientX, t:e.timeStamp}); if (hist.length > 6) hist.shift(); this.idle = 0;
+    });
+    const up = () => { const d = this.drag; if (!d) return; this.drag = null; el.classList.remove('grabbing');
+      const a = hist[0], b = hist[hist.length - 1], dt = Math.max(16, b.t - a.t) / 1000;
+      this.vy = clamp((b.x - a.x) / dt * .011, -14, 14);   // l'élan du doigt continue après le lâcher
+      if (!d.moved) this.zoomTo = this.zoomTo > this.o.zoom ? this.o.zoom : this.o.zoom * 1.5;
+    };
+    el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+  }
+  setVariant(v) { this.st.model.variant(v, false); this.start(); }
+  spin() { this.vy = 7; this.look = null; this.idle = 0; this.start(); }
+  lookTo(o) { this.look = o; this.vy = 0; this.idle = 0; this.start(); }
+  action() { const r = this.st.model.action?.(this); this.idle = 0; this.start(); return r; }
+  attachHotspots(layer, onTap) {
+    this.hs = this.st.model.hotspots.map((h, i) => { const b = document.createElement('button'); b.className = 'hs'; b.dataset.hs = i; b.setAttribute('aria-label', PRODUCTS[this.key].hotspots[i].t); b.onclick = e => { e.stopPropagation(); onTap(i, b); }; layer.appendChild(b); return {h, b}; });
+  }
+  start() { if (!this.raf && !this.dead) { this.last = performance.now(); this.raf = requestAnimationFrame(t => this.loop(t)); } }
+  loop(now) {
+    this.raf = 0; if (this.dead) return;
+    const dt = Math.min(.05, (now - this.last) / 1000); this.last = now;
+    const st = this.st, m = st.model;
+    if (!this.drag) {
+      this.idle += dt;
+      if (this.look) { const k = 1 - Math.exp(-dt * 5); let dy = this.look.yaw - this.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); this.yaw += dy * k; this.pitch += (this.look.pitch - this.pitch) * k; }
+      else {
+        this.yaw += this.vy * dt; this.vy *= Math.exp(-dt * 2.2);
+        if (this.o.auto && !RM && this.idle > 2.5 && Math.abs(this.vy) < .4) this.vy += (.32 - this.vy) * (1 - Math.exp(-dt * 1.5));
+        this.pitch += (this.rest.pitch - this.pitch) * (1 - Math.exp(-dt * 3));   // ressort qui ramène l'inclinaison
+      }
+    }
+    this.zoomNow += (this.zoomTo - this.zoomNow) * (1 - Math.exp(-dt * 7));
+    let yaw = this.yaw, pitch = this.pitch, zoom = this.zoomNow;
+    if (this.o.scroll) { const s = this.o.scroll(this.p); yaw += s.yaw || 0; pitch += s.pitch || 0; zoom *= s.zoom || 1; }
+    st.yawG.rotation.y = yaw; st.pitchG.rotation.x = pitch;
+    tickColors(m.mats, dt); m.tick?.(dt);
+    if (this.w) { frame(st, this.w / this.h, zoom, 0, this.o.scroll ? this.o.scroll(this.p).ty || 0 : 0, this.o.lift ?? .12); this.r.render(st.scene, st.cam); if (!this.live) { this.live = true; this.el.classList.add('live'); } }
+    if (this.hs.length) this.placeHotspots();
+    if (this.visible) this.start();
+  }
+  placeHotspots() {
+    const st = this.st, cp = st.cam.position, v = new T.Vector3(), n = new T.Vector3(), toCam = new T.Vector3();
+    st.scene.updateMatrixWorld();
+    for (const {h, b} of this.hs) {
+      h.m.getWorldPosition(v); n.copy(h.n).transformDirection(h.m.parent.matrixWorld); toCam.copy(cp).sub(v).normalize();
+      const facing = n.dot(toCam) > .12, s = v.clone().project(st.cam);
+      b.style.transform = `translate(${(s.x * .5 + .5) * this.w}px,${(-s.y * .5 + .5) * this.h}px)`;
+      b.classList.toggle('away', !facing || this.zoomNow > this.o.zoom * 1.2);
+      b._x = (s.x * .5 + .5); b._y = (-s.y * .5 + .5);
+    }
+  }
+  dispose() { this.dead = true; cancelAnimationFrame(this.raf); this.ro.disconnect(); this.io.disconnect(); this.r.dispose(); this.r.forceContextLoss?.(); this.canvas.remove(); }
+}
+let VIEWERS = [];
+const killViewers = () => { VIEWERS.forEach(v => v.dispose()); VIEWERS = []; };
+
+/* ═══ Ressort + inclinaison des cartes ═══ */
 class Spring {
   constructor(x = 0, {response = .4, damping = 1} = {}) { this.x = x; this.t = x; this.v = 0; this.k = (2 * Math.PI / response) ** 2; this.c = 4 * Math.PI * damping / response; }
   step(dt) { this.v += (-this.k * (this.x - this.t) - this.c * this.v) * dt; this.x += this.v * dt; return Math.abs(this.v) > .02 || Math.abs(this.x - this.t) > .02; }
 }
 function animator(springs, apply) {
   let raf = 0, last = 0;
-  const loop = now => { const dt = Math.min(.032, (now - last) / 1000 || .016); last = now; let busy = false;
-    for (const s of springs) busy = s.step(dt) || busy;
-    apply(); raf = busy ? requestAnimationFrame(loop) : 0; };
+  const loop = now => { const dt = Math.min(.032, (now - last) / 1000 || .016); last = now; let busy = false; for (const s of springs) busy = s.step(dt) || busy; apply(); raf = busy ? requestAnimationFrame(loop) : 0; };
   return () => { if (!raf) { last = performance.now(); raf = requestAnimationFrame(loop); } };
 }
-
-/* Cartes : inclinaison 3D au survol + enfoncement à la pression */
 function tiltCard(el) {
-  const rx = new Spring(0, {response:.5}), ry = new Spring(0, {response:.5}), s = new Spring(1, {response:.3});
-  const glare = el.querySelector('.glare');
+  const rx = new Spring(0, {response:.5}), ry = new Spring(0, {response:.5}), s = new Spring(1, {response:.3}), glare = el.querySelector('.glare');
   const kick = animator([rx, ry, s], () => { el.style.transform = `rotateX(${rx.x}deg) rotateY(${ry.x}deg) scale(${s.x})`; });
-  if (FINE && !RM) el.addEventListener('pointermove', e => {
-    const r = el.getBoundingClientRect(), nx = (e.clientX - r.left) / r.width - .5, ny = (e.clientY - r.top) / r.height - .5;
-    ry.t = nx * 12; rx.t = -ny * 12;
-    if (glare) { glare.style.setProperty('--gx', (nx + .5) * 100 + '%'); glare.style.setProperty('--gy', (ny + .5) * 100 + '%'); }
-    kick();
-  });
+  if (FINE && !RM) el.addEventListener('pointermove', e => { const r = el.getBoundingClientRect(), nx = (e.clientX - r.left) / r.width - .5, ny = (e.clientY - r.top) / r.height - .5;
+    ry.t = nx * 12; rx.t = -ny * 12; if (glare) { glare.style.setProperty('--gx', (nx + .5) * 100 + '%'); glare.style.setProperty('--gy', (ny + .5) * 100 + '%'); } kick(); });
   el.addEventListener('pointerleave', () => { rx.t = ry.t = 0; s.t = 1; kick(); });
   el.addEventListener('pointerdown', () => { s.t = .96; kick(); });
   ['pointerup','pointercancel'].forEach(t => el.addEventListener(t, () => { s.t = 1; kick(); }));
 }
 
-/* Scène « Explorer » : glisser pour incliner (avec élan et résistance), toucher pour zoomer */
-function dragStage(stage) {
-  const inner = stage.querySelector('.stage-in'), glare = stage.querySelector('.glare');
-  const ry = new Spring(0, {response:.45, damping:.75}), rx = new Spring(0, {response:.45, damping:.75});
-  const kick = animator([rx, ry], () => {
-    inner.style.transform = `rotateY(${ry.x}deg) rotateX(${rx.x}deg)`;
-    if (glare) glare.style.setProperty('--gx', 50 + ry.x * 1.5 + '%');
-  });
-  const rubber = (v, max) => Math.sign(v) * (Math.abs(v) < max ? Math.abs(v) : max + (Math.abs(v) - max) * .25);
-  let down = null, hist = [];
-  stage.addEventListener('pointerdown', e => {
-    if (e.target.closest('.hs,.hs-card')) return;
-    down = {x:e.clientX, y:e.clientY, moved:false}; hist = [{x:e.clientX, y:e.clientY, t:e.timeStamp}];
-    stage.setPointerCapture(e.pointerId); stage.classList.add('grabbing');
-  });
-  stage.addEventListener('pointermove', e => {
-    if (!down) return;
-    const dx = e.clientX - down.x, dy = e.clientY - down.y;
-    if (Math.abs(dx) + Math.abs(dy) > 6) down.moved = true;
-    hist.push({x:e.clientX, y:e.clientY, t:e.timeStamp}); if (hist.length > 5) hist.shift();
-    ry.t = ry.x = rubber(dx * .35, 30); rx.t = rx.x = rubber(-dy * .2, 14); ry.v = rx.v = 0; kick();
-  });
-  const up = e => {
-    if (!down) return;
-    stage.classList.remove('grabbing');
-    if (!down.moved) { inner.classList.toggle('zoom'); closeHotspots(stage); }
-    const a = hist[0], b = hist[hist.length - 1], dt = Math.max(1, b.t - a.t) / 1000;
-    ry.v = (b.x - a.x) / dt * .35; rx.v = -(b.y - a.y) / dt * .2;   // l'élan du geste continue dans le ressort
-    ry.t = rx.t = 0; down = null; kick();
-  };
-  stage.addEventListener('pointerup', up);
-  stage.addEventListener('pointercancel', up);
-  return () => { ry.v = 320; kick(); };
-}
-function closeHotspots(scope) { scope.querySelectorAll('.hs.on').forEach(h => h.classList.remove('on')); scope.querySelectorAll('.hs-card').forEach(c => c.remove()); }
-
 /* ═══ Gabarits ═══ */
-const defaults = p => Object.fromEntries(Object.entries(p.options).map(([g, o]) => [g, colorOf(o[0])[0]]));
 const optionsHTML = (p, v) => Object.entries(p.options).map(([g, opts]) =>
   `<div class="group-label">${g}. <span>${v[g]}</span></div><div class="opts">${opts.map(o => { const [l, c] = colorOf(o);
     return `<button class="opt${v[g] === l ? ' on' : ''}" data-g="${g}" data-o="${l}">${c ? `<i style="background:${c}"></i>` : ''}${l}</button>`; }).join('')}</div>`).join('');
 const swatchesHTML = p => { const c = Object.values(p.options).find(v => Array.isArray(v[0]));
   return c ? `<div class="swatches">${c.map(x => `<i style="background:${x[1]}" title="${x[0]}"></i>`).join('')}</div>` : ''; };
+const thumb = (k, cls = '', alt = '') => `<img data-thumb="${k}" alt="${alt}" ${cls ? `class="${cls}"` : ''}>`;
 const tileHTML = (k, big) => { const p = PRODUCTS[k];
-  if (p.bleed) return `<article class="tile bleed on-dark" style="--c:${p.bg};--fg:#f5f5f7">
-      <div class="press" data-open="${k}" data-par><img src="${p.img}" alt="${p.name}" loading="lazy"></div>
-      <div class="copy rv"><h2 class="h-hero">${p.name}</h2><p class="sub">${p.tagline}</p>
-      <div class="ctas"><a href="#produit-${k}" class="link" data-open="${k}">En savoir plus</a><button class="link" data-add="${k}">Acheter</button></div></div>
-      <span class="tap-tip">Touchez pour ouvrir</span></article>`;
   return `<article class="tile${p.dark ? ' on-dark' : ''}" style="--c:${p.bg};--fg:${fgOf(p)}">
     <div class="rv">${p.tag ? `<span class="new">${p.tag}</span>` : ''}<h2 class="h-hero">${p.name}</h2><p class="sub">${p.tagline}</p>
       ${big ? `<p class="from">À partir de ${p.price} CHF</p>` : ''}
-      <div class="ctas">${big ? `<a href="#produit-${k}" class="btn" data-open="${k}">En savoir plus</a><button class="btn btn-o" data-add="${k}">Acheter</button>`
-        : `<a href="#produit-${k}" class="link" data-open="${k}">En savoir plus</a><button class="link" data-add="${k}">Acheter</button>`}</div></div>
-    <div class="press" data-open="${k}" data-par><img src="${p.img}" alt="${p.name}" ${big ? '' : 'loading="lazy"'}></div>
-    <span class="tap-tip">Touchez pour ouvrir</span></article>`;
+      <div class="ctas">${big ? `<a href="#produit-${k}" class="btn" data-open="${k}">Voir en 3D</a><button class="btn btn-o" data-add="${k}">Acheter</button>`
+        : `<a href="#produit-${k}" class="link" data-open="${k}">Voir en 3D</a><button class="link" data-add="${k}">Acheter</button>`}</div></div>
+    <div class="press" data-open="${k}" data-par>${thumb(k, '', p.name)}</div>
+    <span class="tap-tip">Touchez pour faire pivoter</span></article>`;
 };
 const cardHTML = k => { const p = PRODUCTS[k];
   return `<article class="card" data-k="${k}"><div class="tilt" data-open="${k}"><span class="glare"></span>
-    <div class="card-media" style="--c:${p.bg}"><img src="${p.img}" alt="${p.name}" loading="lazy"></div>
+    <div class="card-media" style="--c:${p.bg}">${thumb(k, '', p.name)}</div>
     <div class="card-body"><span class="new">${p.tag}</span><h3>${p.name}</h3><p class="p">${p.desc}</p>${swatchesHTML(p)}
     <div class="card-foot"><span class="price">${chf(p.price)}</span><button class="btn btn-sm" data-add="${k}">Acheter</button></div></div></div></article>`; };
 
 function productHTML(k, shared) {
   const p = PRODUCTS[k], fg = fgOf(p), dk = p.dark ? ' on-dark' : '';
   const others = ORDER.filter(x => x !== k).slice(0, 3);
+  const colorGroups = Object.entries(p.options).filter(([, o]) => Array.isArray(o[0]));
   return `<div class="pnav${p.dark ? ' dark' : ''}"><div class="wrap"><b>${p.name}</b><nav>
-      <a href="#" data-scroll="#pd-feats">Points forts</a><a href="#" data-scroll="#pd-explore">Explorer</a><a href="#" data-scroll="#pd-specs">Caractéristiques</a>
+      <a href="#" data-scroll="#pd-explore">Voir en 3D</a><a href="#" data-scroll="#pd-feats">Points forts</a><a href="#" data-scroll="#pd-specs">Caractéristiques</a>
       <button class="btn btn-sm" data-scroll="#pd-buy">Acheter</button></nav></div></div>
-    <section class="scene pd-hero${p.bleed ? ' bleed' : ''}${dk}" data-scene style="--pbg:${p.bg};--pfg:${fg}">
+    <section class="scene pd-hero${dk}" data-scene style="--pbg:${p.bg};--pfg:${fg}">
       <div class="sticky">
-        <img class="pd-img" src="${p.img}" alt="${p.name}" ${shared ? 'style="view-transition-name:hero-img"' : ''}>
         <h1 class="pd-name">${p.name}</h1>
+        <div class="v3d" id="heroV"><img class="ph" data-thumb="${k}" alt="${p.name}" ${shared ? 'style="view-transition-name:hero-img"' : ''}></div>
         <div class="pd-info"><p class="sub">${p.tagline}</p><p class="from">À partir de ${p.price} CHF</p>
-          <div class="ctas"><button class="btn" data-scroll="#pd-buy">Acheter</button><a href="#" class="link" data-scroll="#pd-explore">Explorer le produit</a></div></div>
+          <div class="ctas"><button class="btn" data-scroll="#pd-buy">Acheter</button><a href="#" class="link" data-scroll="#pd-explore">Faire pivoter en 3D</a></div></div>
         <div class="hint" style="color:inherit;opacity:clamp(0,calc(.6 - var(--p,0)*8),.6)"><span>Faites défiler</span><i></i></div>
       </div>
     </section>
-    <section class="pd-feats" id="pd-feats" style="--pbg:${p.bg}"><div class="wrap">
-      ${p.feats.map(f => `<div class="feat" data-par><div class="crop" style="--ox:${f.z[0]}%;--oy:${f.z[1]}%;--z:${f.z[2]}"><img src="${p.img}" alt="" loading="lazy"></div>
-        <div><h3>${f.t}</h3><p class="p">${f.d}</p></div></div>`).join('')}
-    </div></section>
     <section class="explore${dk}" id="pd-explore" style="--pbg:${p.bg};--pfg:${fg}"><div class="wrap">
-      <h2 class="h-sec rv">Touchez pour explorer.</h2>
-      <p class="p rv d1" style="margin-top:12px">Faites glisser pour incliner. Touchez l’image pour zoomer, et les points pour en savoir plus.</p>
-      <div class="stage rv d2" id="stage"><div class="stage-in"><img src="${p.img}" alt="${p.name}, vue détaillée" loading="lazy"><span class="glare"></span>
-        ${p.hotspots.map((h, i) => `<button class="hs" style="left:${h.x}%;top:${h.y}%" data-hs="${i}" aria-label="${h.t}"></button>`).join('')}</div></div>
-      <div class="stage-tools"><button class="tool" id="wiggle">Faire pivoter</button><button class="tool" id="tourBtn">Visite guidée</button></div>
+      <h2 class="h-sec rv">Faites-le pivoter.</h2>
+      <p class="p rv d1" style="margin-top:12px">Glissez pour tourner le produit, touchez-le pour zoomer, et ouvrez les points pour en savoir plus.</p>
+      <div class="stage v3d" id="stage"><img class="ph" data-thumb="${k}" alt="${p.name}, modèle 3D interactif">
+        <div class="stage-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 12h16M8 8l-4 4 4 4M16 8l4 4-4 4"/></svg>Glissez pour faire pivoter</div></div>
+      ${colorGroups.length ? colorGroups.map(([g, o]) => `<div class="live-sw" data-group="${g}">${o.map(([l, c]) => `<button style="background:${c}" data-g="${g}" data-o="${l}" aria-label="${g} ${l}"></button>`).join('')}</div>`).join('') + `<p class="live-label" id="liveLabel"></p>` : ''}
+      <div class="stage-tools">
+        <button class="tool" id="actBtn">${p.action}</button>
+        <button class="tool" id="spinBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg>Faire pivoter</button>
+        <button class="tool" id="tourBtn">Visite guidée</button>
+      </div>
+    </div></section>
+    <section class="pd-feats" id="pd-feats" style="--pbg:${p.bg}"><div class="wrap">
+      ${p.feats.map((f, i) => `<div class="feat" data-par><div class="crop"><img data-feat="${i}" alt="${f.t}"></div><div><h3>${f.t}</h3><p class="p">${f.d}</p></div></div>`).join('')}
     </div></section>
     <section class="sec dark on-dark" id="pd-specs"><div class="wrap">
       <div class="sec-head rv"><h2 class="h-sec">En chiffres.</h2></div>
       <div class="specs">${p.specs.map(([n, u, l], i) => `<div class="stat rv d${i}"><b><span data-count="${n}">${fmt(n)}</span>${u ? ' ' + u : ''}</b><span>${l}</span></div>`).join('')}</div>
     </div></section>
     <section class="sec" id="pd-buy"><div class="wrap buy">
-      <div class="buy-media" style="--pbg:${p.bg}" id="buyMedia"><img src="${p.img}" alt="${p.name}"></div>
+      <div class="buy-media" style="--pbg:${p.bg}" id="buyMedia"><img id="buyImg" data-thumb="${k}" alt="${p.name}"></div>
       <div><span class="new">${p.tag}</span><h2>Acheter ${p.name}</h2><p class="buy-price">${chf(p.price)}</p>
         <p class="buy-ship">${p.price >= FREE_SHIPPING ? 'Livraison offerte' : 'Livraison offerte dès ' + FREE_SHIPPING + ' CHF'} · Expédié sous 24 h</p>
         <p class="p">${p.desc}</p>
@@ -857,35 +1175,31 @@ function productHTML(k, shared) {
 }
 
 /* ═══ Parties fixes ═══ */
-$('tilesBig').innerHTML = tileHTML('buds', true);
-$('tilesGrid').innerHTML = ['glow','mag','air','cinema'].map(k => tileHTML(k)).join('');
+$('tilesBig').innerHTML = tileHTML('watch', true);
+$('tilesGrid').innerHTML = ['buds','max','mag','cinema'].map(k => tileHTML(k)).join('');
 $('hgTrack').innerHTML = ORDER.map(k => { const p = PRODUCTS[k];
-  return `<button class="hg-card" data-open="${k}" style="--c:${p.bg};--fg:${fgOf(p)}"><h3>${p.name}</h3><p>${p.short}</p><img src="${p.img}" alt="" loading="lazy"><span class="plus">+</span></button>`; }).join('');
+  return `<button class="hg-card" data-open="${k}" style="--c:${p.bg};--fg:${fgOf(p)}"><h3>${p.name}</h3><p>${p.short}</p>${thumb(k)}<span class="plus">+</span></button>`; }).join('');
 $('compare').innerHTML = COMPARE.map(([k, rows], i) => { const p = PRODUCTS[k];
-  return `<div class="cmp rv d${i}"><div class="press" data-open="${k}"><img src="${p.img}" alt="${p.name}" loading="lazy"></div><h3>${p.name}</h3>
+  return `<div class="cmp rv d${i}"><div class="press" data-open="${k}" style="--c:${p.bg}">${thumb(k, '', p.name)}</div><h3>${p.name}</h3>
     <div class="cmp-price">${p.price} CHF</div><button class="btn btn-sm" data-add="${k}">Acheter</button>
     <ul>${rows.map(([b, s]) => `<li><b>${b}</b>${s}</li>`).join('')}</ul></div>`; }).join('');
 $('flyGrid').innerHTML = ORDER.map((k, i) => { const p = PRODUCTS[k];
-  return `<a class="fly-item" href="#produit-${k}" data-open="${k}" style="transition-delay:${40 + i * 35}ms"><img src="${p.img}" alt="">${p.name}<span>${p.price} CHF</span></a>`; }).join('');
-$('mnav').innerHTML = `<a href="#accueil">Accueil</a><a href="#boutique">Boutique</a><a href="#aide">Aide</a><h5>Produits</h5>`
-  + ORDER.map(k => `<a class="msub" href="#produit-${k}">${PRODUCTS[k].name}</a>`).join('');
+  return `<a class="fly-item" href="#produit-${k}" data-open="${k}" style="transition-delay:${40 + i * 35}ms;--c:${p.bg}"><span class="fi">${thumb(k)}</span>${p.name}<span>${p.price} CHF</span></a>`; }).join('');
+$('mnav').innerHTML = `<a href="#accueil">Accueil</a><a href="#boutique">Boutique</a><a href="#aide">Aide</a><h5>Produits</h5>` + ORDER.map(k => `<a class="msub" href="#produit-${k}">${PRODUCTS[k].name}</a>`).join('');
 $('footProducts').innerHTML = ORDER.map(k => `<a href="#produit-${k}">${PRODUCTS[k].name}</a>`).join('');
 $('chips').innerHTML = CATS.map((c, i) => { const k = ORDER.find(x => PRODUCTS[x].cat === c);
-  return `<button class="chip${i ? '' : ' on'}" data-cat="${c}" role="tab" aria-selected="${!i}"><span class="ci${i ? '' : ' all'}">${k ? `<img src="${PRODUCTS[k].img}" alt="">` : ''}</span>${c}</button>`; }).join('');
-// Découpe le paragraphe en mots pour la révélation au défilement
+  return `<button class="chip${i ? '' : ' on'}" data-cat="${c}" role="tab" aria-selected="${!i}"><span class="ci${i ? '' : ' all'}" ${k ? `style="--c:${PRODUCTS[k].bg}"` : ''}>${k ? thumb(k) : ''}</span>${c}</button>`; }).join('');
 (() => { const w = $('words'), out = [];
   w.childNodes.forEach(n => { if (n.nodeType === 3) n.textContent.split(/\s+/).filter(Boolean).forEach(t => out.push(`<span>${t}</span>`)); else out.push(`<span class="hl">${n.textContent}</span>`); });
   w.innerHTML = out.join(' ').replace(/<\/span> <span>([,.;:])<\/span>/g, '$1</span>'); })();
 
-/* ═══ Boutique : filtres + tri, animés (FLIP) ═══ */
+/* ═══ Boutique : filtres + tri animés ═══ */
 let cat = 'Tous', sortBy = 'pop';
 function renderShop(animate) {
   const grid = $('shopGrid');
-  if (!grid.children.length) { grid.innerHTML = ORDER.map(cardHTML).join(''); grid.querySelectorAll('.tilt').forEach(tiltCard); }
-  const cards = [...grid.children], first = new Map(cards.map(c => [c, c.getBoundingClientRect()]));
-  const wasHidden = new Set(cards.filter(c => c.hidden));
-  const list = ORDER.filter(k => cat === 'Tous' || PRODUCTS[k].cat === cat)
-    .sort((a, b) => sortBy === 'asc' ? PRODUCTS[a].price - PRODUCTS[b].price : sortBy === 'desc' ? PRODUCTS[b].price - PRODUCTS[a].price : 0);
+  if (!grid.children.length) { grid.innerHTML = ORDER.map(cardHTML).join(''); grid.querySelectorAll('.tilt').forEach(tiltCard); fillThumbs(grid); }
+  const cards = [...grid.children], first = new Map(cards.map(c => [c, c.getBoundingClientRect()])), wasHidden = new Set(cards.filter(c => c.hidden));
+  const list = ORDER.filter(k => cat === 'Tous' || PRODUCTS[k].cat === cat).sort((a, b) => sortBy === 'asc' ? PRODUCTS[a].price - PRODUCTS[b].price : sortBy === 'desc' ? PRODUCTS[b].price - PRODUCTS[a].price : 0);
   cards.forEach(c => { c.hidden = !list.includes(c.dataset.k); c.style.order = list.indexOf(c.dataset.k); });
   $('shopCount').textContent = list.length + (list.length > 1 ? ' produits' : ' produit');
   if (!animate || RM) return;
@@ -899,82 +1213,103 @@ $('chips').addEventListener('click', e => { const c = e.target.closest('.chip');
   cat = c.dataset.cat; document.querySelectorAll('.chip').forEach(x => { x.classList.toggle('on', x === c); x.setAttribute('aria-selected', x === c); }); renderShop(true); });
 $('sort').addEventListener('change', e => { sortBy = e.target.value; renderShop(true); });
 
-/* ═══ Onglets : #accueil, #boutique, #aide, #produit-… ═══ */
+/* ═══ Onglets ═══ */
 let current = null, pendingSrc = null, pd = null;
 function route() {
   const h = location.hash.slice(1) || 'accueil';
-  let view = ['accueil','boutique','aide'].includes(h) ? h : null, k = null;
+  let view = ['accueil','boutique','aide'].includes(h) ? h : 'accueil', k = null;
   if (h.startsWith('produit-') && PRODUCTS[h.slice(8)]) { view = 'produit'; k = h.slice(8); }
-  if (!view) view = 'accueil';
   const src = pendingSrc; pendingSrc = null;
   const apply = () => {
     if (src) src.style.viewTransitionName = '';
+    killViewers();
     document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.dataset.view === view));
     if (view === 'produit') mountProduct(k, !!src);
     if (view === 'boutique') renderShop(false);
+    if (view === 'accueil') mountHome();
     document.querySelectorAll('[data-tab]').forEach(t => t.classList.toggle('on', t.dataset.tab === view));
     $('gnav').classList.toggle('dark', view === 'produit' && !!PRODUCTS[k].dark);
-    window.scrollTo(0, 0); current = view; closeMenus(); collect(); update();
+    window.scrollTo(0, 0); current = view; closeMenus(); fillThumbs(); collect(); update();
   };
   if (document.startViewTransition && !RM && current) {
     if (src && view === 'produit') src.style.viewTransitionName = 'hero-img';
     const t = document.startViewTransition(apply);
-    t.finished.finally(() => { const hi = document.querySelector('.pd-img'); if (hi) hi.style.viewTransitionName = ''; });
+    t.finished.finally(() => { const hi = document.querySelector('#heroV .ph'); if (hi) hi.style.viewTransitionName = ''; });
   } else apply();
 }
 function openProduct(k, img) { pendingSrc = img || null; if (location.hash === '#produit-' + k) route(); else location.hash = 'produit-' + k; }
 
+function mountHome() {
+  if (!HAS3D) return;
+  const hv = new Viewer($('homeV'), 'ring', {auto:false, lift:.06, scroll:p => ({yaw:p * Math.PI * 1.6, pitch:-p * .25, zoom:2.4 - Math.min(1, p * 1.35) * 1.6, ty:-Math.min(1, p * 1.35) * .45})});
+  hv.p = 0; VIEWERS.push(hv); $('homeHero')._viewer = hv;
+}
 function mountProduct(k, shared) {
   const p = PRODUCTS[k];
   $('pdView').innerHTML = productHTML(k, shared);
   pd = {k, v:defaults(p)};
   $('pdView').querySelectorAll('.tilt').forEach(tiltCard);
-  const stage = $('stage'), spin = dragStage(stage);
-  stage.addEventListener('click', e => { const b = e.target.closest('.hs'); if (b) toggleHotspot(stage, b, p); });
-  $('wiggle').onclick = spin;
-  $('tourBtn').onclick = () => tour(stage, p);
-  $('buyOpts').addEventListener('click', e => { const o = e.target.closest('[data-o]'); if (!o) return;
-    pd.v[o.dataset.g] = o.dataset.o; $('buyOpts').innerHTML = optionsHTML(p, pd.v);
-    const m = $('buyMedia'); m.classList.remove('bump'); void m.offsetWidth; m.classList.add('bump'); });
-  $('buyAdd').onclick = () => { addToBag(k, {...pd.v}); flyToBag($('buyMedia').querySelector('img')); };
+  if (HAS3D) {
+    const hero = new Viewer($('heroV'), k, {auto:false, lift:.08, scroll:q => ({yaw:q * Math.PI * 1.25 - .5, zoom:1.05 - q * .12})});
+    $('pdView').querySelector('.pd-hero')._viewer = hero;
+    const ex = new Viewer($('stage'), k, {interactive:true, auto:true, zoom:.92});
+    ex.attachHotspots($('stage'), (i, b) => toggleHotspot(ex, i, b));
+    VIEWERS.push(hero, ex); pd.ex = ex; pd.hero = hero;
+    // gros plans rendus en 3D, l'un après l'autre pour ne pas bloquer
+    p.feats.forEach((f, i) => setTimeout(() => { const im = $('pdView').querySelector(`[data-feat="${i}"]`); if (im && pd.k === k) im.src = snap(k, pd.v, f.view, 900); }, 120 + i * 90));
+  }
+  const act = $('actBtn');
+  act.onclick = () => { const on = pd.ex?.action(); act.classList.toggle('on', !!on); };
+  $('spinBtn').onclick = () => pd.ex?.spin();
+  $('tourBtn').onclick = () => tour();
+  const sync = (g, o) => {
+    pd.v[g] = o; $('buyOpts').innerHTML = optionsHTML(p, pd.v);
+    $('pdView').querySelectorAll('.live-sw button').forEach(b => b.classList.toggle('on', pd.v[b.dataset.g] === b.dataset.o));
+    const ll = $('liveLabel'); if (ll) ll.textContent = Object.entries(pd.v).filter(([gg]) => Array.isArray(p.options[gg][0])).map(([gg, vv]) => `${gg} ${vv}`).join(' · ');
+    pd.ex?.setVariant(pd.v); pd.hero?.setVariant(pd.v);
+    clearTimeout(pd.snapT); pd.snapT = setTimeout(() => { const u = snap(k, pd.v, p.view); if (u) $('buyImg').src = u; const m = $('buyMedia'); m.classList.remove('bump'); void m.offsetWidth; m.classList.add('bump'); }, 60);
+  };
+  $('pdView').querySelectorAll('.live-sw').forEach(w => w.addEventListener('click', e => { const b = e.target.closest('button'); if (b) sync(b.dataset.g, b.dataset.o); }));
+  $('buyOpts').addEventListener('click', e => { const o = e.target.closest('[data-o]'); if (o) sync(o.dataset.g, o.dataset.o); });
+  sync(Object.keys(pd.v)[0] || '', Object.values(pd.v)[0]);
+  $('buyAdd').onclick = () => { addToBag(k, {...pd.v}); flyToBag($('buyImg')); };
 }
-function toggleHotspot(stage, b, p) {
-  const was = b.classList.contains('on'); closeHotspots(stage); if (was) return;
-  stage.querySelector('.stage-in').classList.remove('zoom');
-  const h = p.hotspots[+b.dataset.hs]; b.classList.add('on');
-  const card = document.createElement('div'); card.className = 'hs-card';
-  card.innerHTML = `<b>${h.t}</b>${h.d}`;
-  const right = h.x > 55, below = h.y < 50;
-  card.style[right ? 'right' : 'left'] = (right ? 100 - h.x : h.x) + 3 + '%';
-  card.style[below ? 'top' : 'bottom'] = (below ? h.y : 100 - h.y) + 4 + '%';
-  card.style.setProperty('--tox', right ? '100%' : '0'); card.style.setProperty('--toy', below ? '0' : '100%');
-  stage.querySelector('.stage-in').appendChild(card);
+function closeHotspots() { document.querySelectorAll('#stage .hs.on').forEach(h => h.classList.remove('on')); document.querySelectorAll('#stage .hs-card').forEach(c => c.remove()); }
+function toggleHotspot(ex, i, b) {
+  const was = b.classList.contains('on'); closeHotspots(); if (was) return;
+  const h = PRODUCTS[pd.k].hotspots[i], st = $('stage'); b.classList.add('on'); ex.vy = 0; ex.idle = -4;
+  const card = document.createElement('div'); card.className = 'hs-card'; card.innerHTML = `<b>${h.t}</b>${h.d}`;
+  const x = b._x ?? .5, y = b._y ?? .5, right = x > .55;
+  card.style[right ? 'right' : 'left'] = ((right ? 1 - x : x) * 100 + 4) + '%';
+  card.style[y < .5 ? 'top' : 'bottom'] = ((y < .5 ? y : 1 - y) * 100 + 4) + '%';
+  st.appendChild(card);
 }
 let tourTimer = 0;
-function tour(stage, p) {
-  clearTimeout(tourTimer);
-  const btns = [...stage.querySelectorAll('.hs')]; let i = 0;
-  const next = () => { if (i >= btns.length) { closeHotspots(stage); return; } toggleHotspot(stage, btns[i++], p); tourTimer = setTimeout(next, 2200); };
-  stage.scrollIntoView({behavior:RM ? 'auto' : 'smooth', block:'center'}); next();
+function tour() {
+  if (!pd.ex) return; clearTimeout(tourTimer); const ex = pd.ex, n = ex.hs.length; let i = 0;
+  $('stage').scrollIntoView({behavior:RM ? 'auto' : 'smooth', block:'center'});
+  const step = () => { closeHotspots(); if (i >= n) { ex.look = null; ex.idle = 0; return; }
+    const {h, b} = ex.hs[i]; const wp = new T.Vector3(); h.m.getWorldPosition(wp);
+    const nn = h.n.clone().transformDirection(h.m.parent.matrixWorld);   // tourne le produit pour faire face au point
+    ex.lookTo({yaw:ex.st.yawG.rotation.y - Math.atan2(nn.x, nn.z), pitch:clamp(Math.asin(clamp(nn.y, -1, 1)) * .8, -.6, .9)});
+    const idx = i++; setTimeout(() => { if (ex.dead) return; toggleHotspot(ex, idx, b); }, 900); tourTimer = setTimeout(step, 3200); };
+  step();
 }
 
-/* ═══ Moteur de défilement : --p = progression d'une scène, --v = entrée dans l'écran ═══ */
+/* ═══ Moteur de défilement ═══ */
 let scenes = [], pars = [], ticking = false;
 const io = new IntersectionObserver(es => es.forEach(en => { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } }), {threshold:.12, rootMargin:'0px 0px -40px 0px'});
 const countIO = new IntersectionObserver(es => es.forEach(en => { if (!en.isIntersecting) return;
   const el = en.target, end = +el.dataset.count; el.dataset.done = 1; countIO.unobserve(el);
   if (RM || !end) { el.textContent = fmt(end); return; }
-  const t0 = performance.now(), dur = 1400;
-  const tick = now => { const t = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - t, 4); el.textContent = fmt(Math.round(end * e)); if (t < 1) requestAnimationFrame(tick); };
+  const t0 = performance.now(), dur = 1400, tick = now => { const t = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - t, 4); el.textContent = fmt(Math.round(end * e)); if (t < 1) requestAnimationFrame(tick); };
   requestAnimationFrame(tick); }), {threshold:.6});
 function collect() {
   const root = document.querySelector('.view.on');
   scenes = [...root.querySelectorAll('[data-scene]')]; pars = [...root.querySelectorAll('[data-par]')];
   scenes.forEach(s => {
-    if (s.hasAttribute('data-hg')) { const tr = s.querySelector('.hg-track'), st = s.querySelector('.sticky');
-      s._fx = p => { if (!RM) tr.style.transform = `translateX(${-p * Math.max(0, tr.scrollWidth - st.clientWidth)}px)`; }; }
-    if (s.hasAttribute('data-words')) { const ws = [...s.querySelectorAll('.words > span')], n = ws.length;
-      s._fx = p => ws.forEach((w, i) => w.style.opacity = RM ? 1 : clamp(p * 1.3 * n - i, .14, 1)); }
+    if (s.hasAttribute('data-hg')) { const tr = s.querySelector('.hg-track'), st = s.querySelector('.sticky'); s._fx = p => { if (!RM) tr.style.transform = `translateX(${-p * Math.max(0, tr.scrollWidth - st.clientWidth)}px)`; }; }
+    if (s.hasAttribute('data-words')) { const ws = [...s.querySelectorAll('.words > span')], n = ws.length; s._fx = p => ws.forEach((w, i) => w.style.opacity = RM ? 1 : clamp(p * 1.3 * n - i, .14, 1)); }
   });
   root.querySelectorAll('.rv:not(.in)').forEach(el => io.observe(el));
   root.querySelectorAll('[data-count]:not([data-done])').forEach(el => countIO.observe(el));
@@ -982,13 +1317,13 @@ function collect() {
 function update() {
   ticking = false; const vh = innerHeight;
   for (const s of scenes) { const r = s.getBoundingClientRect(), p = RM ? 1 : clamp(-r.top / Math.max(1, r.height - vh), 0, 1);
-    s.style.setProperty('--p', p.toFixed(4)); if (s._fx) s._fx(p); }
+    s.style.setProperty('--p', p.toFixed(4)); if (s._fx) s._fx(p); if (s._viewer) { s._viewer.p = p; s._viewer.start(); } }
   for (const el of pars) { const r = el.getBoundingClientRect(), v = RM ? 1 : clamp((vh - r.top) / (vh * .75), 0, 1); el.style.setProperty('--v', v.toFixed(4)); }
 }
 addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } }, {passive:true});
 addEventListener('resize', update);
 
-/* ═══ Menu Produits (survol ou clic) et menu mobile ═══ */
+/* ═══ Menus ═══ */
 let flyTimer;
 const openFly = () => { clearTimeout(flyTimer); $('flyout').classList.add('on'); $('navscrim').classList.add('on'); $('menuBtn').setAttribute('aria-expanded', 'true'); };
 const closeFly = () => { $('flyout').classList.remove('on'); $('navscrim').classList.remove('on'); $('menuBtn').setAttribute('aria-expanded', 'false'); };
@@ -1005,8 +1340,8 @@ $('mnav').addEventListener('click', e => { if (e.target.tagName === 'A') closeMe
 
 /* ═══ Panier ═══ */
 let bag = [];
-try { bag = JSON.parse(localStorage.getItem('nuvo_bag') || '[]').filter(l => PRODUCTS[l.k]); } catch (e) {}
-const save = () => { try { localStorage.setItem('nuvo_bag', JSON.stringify(bag)); } catch (e) {} };
+try { bag = JSON.parse(localStorage.getItem('nuvo_bag3d') || '[]').filter(l => PRODUCTS[l.k]); } catch (e) {}
+const save = () => { try { localStorage.setItem('nuvo_bag3d', JSON.stringify(bag)); } catch (e) {} };
 const variantText = v => Object.entries(v).map(([g, o]) => `${g} : ${o}`).join(' · ');
 const totals = () => { const sub = bag.reduce((a, l) => a + PRODUCTS[l.k].price * l.q, 0), ship = !sub || sub >= FREE_SHIPPING ? 0 : SHIPPING; return {sub, ship, total:sub + ship}; };
 function addToBag(k, variant = {}) {
@@ -1022,26 +1357,24 @@ function render() {
   $('shipMsg').textContent = !t.sub || t.sub >= FREE_SHIPPING ? 'Livraison' : `Plus que ${chf(FREE_SHIPPING - t.sub)} pour la livraison offerte`;
   $('shipBar').style.width = Math.min(100, t.sub / FREE_SHIPPING * 100) + '%';
   $('sheetBody').innerHTML = bag.length ? bag.map((l, i) => { const p = PRODUCTS[l.k];
-    return `<div class="line"><img src="${p.img}" alt=""><div class="line-info"><b>${p.name}</b><span>${variantText(l.v) || '&nbsp;'}</span>
+    return `<div class="line"><img data-thumb="${l.k}" alt="" style="--c:${p.bg}"><div class="line-info"><b>${p.name}</b><span>${variantText(l.v) || '&nbsp;'}</span>
       <div class="qty"><button data-q="${i}" data-d="-1" aria-label="Retirer un">−</button><span>${l.q}</span><button data-q="${i}" data-d="1" aria-label="Ajouter un">+</button></div></div>
       <div class="line-price">${chf(p.price * l.q)}</div></div>`; }).join('') : '<p class="empty">Votre panier est vide.</p>';
+  fillThumbs($('sheetBody'));
   if (!bag.length) resetCheckout();
 }
 $('sheetBody').addEventListener('click', e => { const b = e.target.closest('[data-q]'); if (!b) return;
   const l = bag[+b.dataset.q]; l.q += +b.dataset.d; if (l.q <= 0) bag.splice(+b.dataset.q, 1); save(); render(); });
-// Le produit « vole » jusqu'au panier
 function flyToBag(img) {
   const bagEl = $('bagBtn'), bump = () => bagEl.animate([{transform:'scale(1)'}, {transform:'scale(1.35)'}, {transform:'scale(1)'}], {duration:450, easing:'cubic-bezier(.34,1.56,.64,1)'});
-  if (RM || !img) return bump();
+  if (RM || !img || !img.src) return bump();
   const r = img.getBoundingClientRect(), b = bagEl.getBoundingClientRect(), c = img.cloneNode();
-  Object.assign(c.style, {position:'fixed', left:r.left + 'px', top:r.top + 'px', width:r.width + 'px', height:r.height + 'px', margin:0, zIndex:400, borderRadius:'24px', objectFit:'cover', pointerEvents:'none', transform:'none', translate:'none', viewTransitionName:'none', maskImage:'none', webkitMaskImage:'none'});
+  Object.assign(c.style, {position:'fixed', left:r.left + 'px', top:r.top + 'px', width:r.width + 'px', height:r.height + 'px', margin:0, zIndex:400, objectFit:'contain', pointerEvents:'none', transform:'none', translate:'none', viewTransitionName:'none', background:'transparent'});
   document.body.appendChild(c);
   const dx = b.left + b.width / 2 - (r.left + r.width / 2), dy = b.top + b.height / 2 - (r.top + r.height / 2);
-  c.animate([{transform:'translate(0,0) scale(1)', borderRadius:'24px'}, {transform:`translate(${dx * .4}px,${dy * .35 - 90}px) scale(.42)`, borderRadius:'40px', offset:.5}, {transform:`translate(${dx}px,${dy}px) scale(.04)`, borderRadius:'50%', opacity:.5}],
-    {duration:800, easing:'cubic-bezier(.55,0,.25,1)'}).onfinish = () => { c.remove(); bump(); };
+  c.animate([{transform:'translate(0,0) scale(1) rotate(0)'}, {transform:`translate(${dx * .4}px,${dy * .35 - 90}px) scale(.45) rotate(-25deg)`, offset:.5}, {transform:`translate(${dx}px,${dy}px) scale(.05) rotate(-60deg)`, opacity:.5}],
+    {duration:820, easing:'cubic-bezier(.55,0,.25,1)'}).onfinish = () => { c.remove(); bump(); };
 }
-
-/* Feuille panier & sélecteur d'options */
 let lastFocus = null, pickState = null;
 function openSheet() { lastFocus = document.activeElement; closeMenus(); $('sheet').classList.add('on'); $('scrim').classList.add('on'); $('sheet').setAttribute('aria-hidden', 'false'); $('sheet').querySelector('.x').focus(); }
 function closeAll() { $('sheet').classList.remove('on'); $('pick').classList.remove('on'); $('scrim').classList.remove('on'); $('sheet').setAttribute('aria-hidden', 'true'); if (lastFocus) lastFocus.focus({preventScroll:true}); }
@@ -1052,17 +1385,16 @@ function openPick(k, src) {
   const p = PRODUCTS[k];
   if (!Object.keys(p.options).length) { addToBag(k); flyToBag(src); return; }
   lastFocus = document.activeElement; pickState = {k, v:defaults(p)};
-  $('pickImg').src = p.img; $('pickTitle').textContent = p.name; $('pickPrice').textContent = chf(p.price);
+  $('pickImg').src = THUMBS[k] || ''; $('pickImg').style.setProperty('--c', p.bg); $('pickTitle').textContent = p.name; $('pickPrice').textContent = chf(p.price);
   $('pickGroups').innerHTML = optionsHTML(p, pickState.v); $('pickMore').href = '#produit-' + k;
   $('pick').classList.add('on'); $('scrim').classList.add('on'); $('pickAdd').focus();
 }
 $('pickGroups').addEventListener('click', e => { const o = e.target.closest('[data-o]'); if (!o) return;
-  pickState.v[o.dataset.g] = o.dataset.o; $('pickGroups').innerHTML = optionsHTML(PRODUCTS[pickState.k], pickState.v); });
+  pickState.v[o.dataset.g] = o.dataset.o; $('pickGroups').innerHTML = optionsHTML(PRODUCTS[pickState.k], pickState.v);
+  const u = snap(pickState.k, pickState.v, PRODUCTS[pickState.k].view, 400); if (u) $('pickImg').src = u; });
 $('pickAdd').onclick = () => { addToBag(pickState.k, pickState.v); flyToBag($('pickImg')); setTimeout(closeAll, 60); };
 $('pickMore').onclick = () => closeAll();
-
-/* Délégation : ouvrir un produit, acheter, défiler vers une section */
-const imgNear = el => el.closest('.tile,.card,.hg-card,.cmp,.fly-item,.press,#ringStats')?.querySelector('img');
+const imgNear = el => el.closest('.tile,.card,.hg-card,.cmp,.fly-item,.press')?.querySelector('img');
 document.addEventListener('click', e => {
   const add = e.target.closest('[data-add]');
   if (add) { e.preventDefault(); e.stopPropagation(); openPick(add.dataset.add, imgNear(add)); return; }
@@ -1072,7 +1404,7 @@ document.addEventListener('click', e => {
   if (sc) { e.preventDefault(); document.querySelector(sc.dataset.scroll)?.scrollIntoView({behavior:RM ? 'auto' : 'smooth'}); }
 });
 
-/* Commande → récapitulatif + email pré-rempli */
+/* Commande */
 function resetCheckout() { $('sent').hidden = true; $('checkoutForm').classList.remove('on'); $('checkout').textContent = 'Commander'; }
 $('checkout').onclick = () => {
   if (!bag.length) { toast('Votre panier est vide'); return; }
@@ -1106,6 +1438,8 @@ $('aideMail').textContent = $('footMail').textContent = STORE_EMAIL;
 $('yr').textContent = new Date().getFullYear();
 addEventListener('hashchange', route);
 render(); route();
+// Vignettes 3D : rendues une à une au démarrage
+if (HAS3D) { let i = 0; const next = () => { if (i >= ORDER.length) { render(); return; } const k = ORDER[i++]; THUMBS[k] = snap(k, defaults(PRODUCTS[k]), PRODUCTS[k].view); fillThumbs(); setTimeout(next, 16); }; setTimeout(next, 30); }
 </script>
 </body>
 </html>
